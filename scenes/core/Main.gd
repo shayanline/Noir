@@ -21,7 +21,6 @@ var _vp: Vector2
 
 func _ready() -> void:
 	_vp = get_viewport_rect().size
-	SceneDirector.load_story(DemoStory.get_story())
 
 	_build_environment()
 	_world = Node2D.new()
@@ -98,7 +97,8 @@ func _process(delta: float) -> void:
 
 # --- flow ---------------------------------------------------------------
 
-func _on_enter() -> void:
+func _on_enter(index: int) -> void:
+	SceneDirector.load_story(StoryLibrary.all()[index]["story"])
 	_start.visible = false
 	AudioDirector.start()
 	var music := String(SceneDirector.story.get("music", ""))
@@ -123,7 +123,7 @@ func _enter_act(index: int, first: bool) -> void:
 		await Transitions.open()
 	AudioDirector.enter_scene(
 		String(scene.get("ambience", "")),
-		bool(scene.get("indoor", false)),
+		scene.get("indoor", false) == true,
 		float(scene.get("ambience_vol", 0.4)),
 		float(scene.get("rain_vol", 0.16)))
 	AudioDirector.whoosh()
@@ -138,13 +138,15 @@ func _swap_panel(scene: Dictionary) -> void:
 		_panel = null
 	var ps: PackedScene = load(String(scene.get("panel", "res://scenes/panels/NoirPanel.tscn")))
 	_panel = ps.instantiate()
-	_panel.config = scene.get("config", {})
+	_panel.setup(scene)
 	_panel.shake_requested.connect(func(a): _shake = max(_shake, a))
 	_world.add_child(_panel)
 
 
 func _show_line() -> void:
 	var line := SceneDirector.current_line()
+	if _panel and _panel.has_method("set_line"):
+		_panel.set_line(SceneDirector.line_index)
 	_hud.show_caption(String(line.get("text", "")))
 	for fx in line.get("fx", []):
 		if _panel and _panel.has_method("on_fx"):
@@ -182,7 +184,7 @@ func _enter_act_covered(index: int) -> void:
 	create_tween().tween_property(_camera, "zoom", Vector2.ONE, 3.2).set_ease(Tween.EASE_OUT)
 	AudioDirector.enter_scene(
 		String(scene.get("ambience", "")),
-		bool(scene.get("indoor", false)),
+		scene.get("indoor", false) == true,
 		float(scene.get("ambience_vol", 0.4)),
 		float(scene.get("rain_vol", 0.16)))
 	_hud.set_scene_tag(String(scene.get("title", "")))

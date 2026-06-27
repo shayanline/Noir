@@ -1,381 +1,257 @@
 extends Node2D
-## A natively rendered noir act. Everything is real Godot 2D: CanvasModulate for the global
-## wash, PointLight2D lights with LightOccluder2D cast shadows, GPUParticles2D rain and fog,
-## an emissive neon that blooms via the WorldEnvironment glow. Driven by a config dict set by
-## Main before it is added to the tree. fx events (lightning, muzzle, blood) are handled here.
+## A natively rendered noir act, the data driven host. It builds the world / light / weather
+## canvases, the registry, the frame and the scene from the story data, then each frame rebuilds
+## the lights, updates the simulation and repaints. Solid art draws to the world canvas, the
+## additive light buffer composites the glow + reflections, weather falls over the lit scene.
+## This is the native equal of Inkfall's compositor + scene, driven entirely by the story.
 
 signal shake_requested(amount: float)
 
-var config := {}
+var _data := {}
+var _registry: NoirRegistry
+var _frame: NoirFrame
+var _scene: NoirScene
+
+var _world: _Canvas
+var _light: _Canvas
+var _weather: _Canvas
 
 var _size: Vector2
-var _ground_y: float
-var _rng := RandomNumberGenerator.new()
+var _drops: Array = []
 
-var _rain: GPUParticles2D
-var _flash: Sprite2D
-var _bolt: Line2D
-var _lightning_light: PointLight2D
-var _red_rain := false
+
+class _Canvas extends Node2D:
+	var painter: Callable
+	func _draw() -> void:
+		if painter.is_valid():
+			painter.call(self)
 
 
 func _ready() -> void:
 	_size = get_viewport_rect().size
 	if _size.x < 2.0:
 		_size = Vector2(1280, 720)
-	_ground_y = _size.y * float(config.get("ground", 0.8))
-	_rng.seed = int(config.get("seed", 12345))
-	_red_rain = bool(config.get("blood_rain", false))
 
-	_build_wash()
-	_build_sky()
-	_build_skyline()
-	_build_ground()
-	_build_lights()
-	_build_figure()
-	if not bool(config.get("indoor", false)):
-		_build_rain()
-	_build_fog()
-	_build_lightning_nodes()
+	_registry = NoirRegistry.new()
+	NoirLibrary.register_all(_registry)
 
+	_frame = NoirFrame.new()
+	_frame.W = _size.x
+	_frame.H = _size.y
+	_frame.unit = min(_size.x, _size.y) / 360.0
 
-# --- base look ----------------------------------------------------------
+	_scene = NoirScene.new(_data, _registry)
+	_scene.build_content()
+	_frame.scene = _scene
 
-func _build_wash() -> void:
-	var cm := CanvasModulate.new()
-	cm.color = Color(0.40, 0.45, 0.58) if not bool(config.get("indoor", false)) else Color(0.5, 0.46, 0.42)
-	add_child(cm)
+	_world = _Canvas.new()
+	_world.z_index = 0
+	_world.painter = _paint_world
+	add_child(_world)
 
+	_light = _Canvas.new()
+	_light.z_index = 10
+	var add_mat := CanvasItemMaterial.new()
+	add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_light.material = add_mat
+	_light.painter = _paint_light
+	add_child(_light)
 
-func _build_sky() -> void:
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
-	g.colors = PackedColorArray([Palette.SKY_TOP, Palette.SKY_MID, Palette.SKY_LOW])
-	var t := GradientTexture2D.new()
-	t.gradient = g
-	t.width = int(_size.x)
-	t.height = int(_size.y)
-	t.fill_from = Vector2(0, 0)
-	t.fill_to = Vector2(0, 1)
-	var sky := Sprite2D.new()
-	sky.texture = t
-	sky.centered = false
-	sky.z_index = -100
-	add_child(sky)
+	_weather = _Canvas.new()
+	_weather.z_index = 20
+	_weather.painter = _paint_weather
+	add_child(_weather)
 
-	if bool(config.get("moon", false)):
-		var moon := Sprite2D.new()
-		moon.texture = FXUtil.soft_dot_texture(192)
-		moon.modulate = Palette.MOON
-		moon.position = Vector2(_size.x * 0.78, _size.y * 0.2)
-		moon.z_index = -90
-		add_child(moon)
+	_init_rain()
+
+	# prime the frame clock + geometry + first line so the very first paint is correct
+	_frame.t = Time.get_ticks_msec() / 1000.0
+	_scene.scene_start = _frame.t
+	_scene.line_start = _frame.t
+	_scene.ensure_geometry(_frame)
 
 
-func _build_skyline() -> void:
-	# two parallax-ready silhouette bands, far darker than near
-	_skyline_band(_ground_y, _size.y * 0.28, _size.y * 0.50, Palette.FAR_INK, -80, 0.40)
-	_skyline_band(_ground_y, _size.y * 0.18, _size.y * 0.34, Palette.MID_INK, -70, 0.0)
+# called by Main before the panel is added to the tree
+func setup(scene_data: Dictionary) -> void:
+	_data = scene_data
 
 
-func _skyline_band(base_y: float, min_h: float, max_h: float, col: Color, z: int, lit_chance: float) -> void:
-	var poly := PackedVector2Array()
-	poly.append(Vector2(0, base_y))
-	var x := 0.0
-	var lit_windows := PackedVector2Array()
-	while x < _size.x:
-		var w := _rng.randf_range(_size.x * 0.05, _size.x * 0.11)
-		var h := _rng.randf_range(min_h, max_h)
-		var top := base_y - h
-		poly.append(Vector2(x, top))
-		poly.append(Vector2(x + w, top))
-		# windows
-		if lit_chance > 0.0:
-			var wy := top + 14.0
-			while wy < base_y - 16.0:
-				var wx := x + 8.0
-				while wx < x + w - 10.0:
-					if _rng.randf() < lit_chance * 0.35:
-						lit_windows.append(Vector2(wx, wy))
-					wx += 14.0
-				wy += 18.0
-		x += w
-	poly.append(Vector2(_size.x, base_y))
-	var p := Polygon2D.new()
-	p.polygon = poly
-	p.color = col
-	p.z_index = z
-	add_child(p)
+func _process(delta: float) -> void:
+	if _scene == null:
+		return
+	_frame.t = Time.get_ticks_msec() / 1000.0
+	_frame.dt = min(delta, 0.05)
+	_scene.ensure_geometry(_frame)
 
-	for wpos in lit_windows:
-		var win := Sprite2D.new()
-		win.texture = FXUtil.soft_dot_texture(16)
-		win.scale = Vector2(0.5, 0.7)
-		win.position = wpos
-		win.modulate = Palette.WARM_WIN if _rng.randf() < 0.6 else Palette.COOL_WIN
-		win.z_index = z + 1
-		add_child(win)
+	# update simulation, then rebuild the light list for this frame (flicker + moving sources)
+	_scene.update(_frame.dt, _frame)
+	_frame.lights = []
+	_emit_sky_light(_frame)
+	_scene.collect_lights(_frame)
+
+	_world.queue_redraw()
+	_light.queue_redraw()
+	_weather.queue_redraw()
 
 
-func _build_ground() -> void:
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array([0.0, 1.0])
-	g.colors = PackedColorArray([Palette.NEAR_INK, Palette.INK])
-	var t := GradientTexture2D.new()
-	t.gradient = g
-	t.width = int(_size.x)
-	t.height = int(_size.y - _ground_y)
-	t.fill_from = Vector2(0, 0)
-	t.fill_to = Vector2(0, 1)
-	var floor_spr := Sprite2D.new()
-	floor_spr.texture = t
-	floor_spr.centered = false
-	floor_spr.position = Vector2(0, _ground_y)
-	floor_spr.z_index = -50
-	add_child(floor_spr)
+# --- flow hooks called by Main -------------------------------------------------------------
 
-
-# --- lighting -----------------------------------------------------------
-
-func _make_light(pos: Vector2, col: Color, energy: float, scale: float, shadows := false) -> PointLight2D:
-	var l := PointLight2D.new()
-	l.texture = FXUtil.radial_light_texture(256)
-	l.texture_scale = scale
-	l.color = col
-	l.energy = energy
-	l.blend_mode = Light2D.BLEND_MODE_ADD
-	l.position = pos
-	l.shadow_enabled = shadows
-	if shadows:
-		l.shadow_filter = Light2D.SHADOW_FILTER_PCF5
-		l.shadow_filter_smooth = 3.0
-		l.shadow_color = Color(0, 0, 0, 0.7)
-	add_child(l)
-	return l
-
-
-func _build_lights() -> void:
-	# street lamp: warm key light that casts the figure's shadow
-	if bool(config.get("lamp", true)):
-		var lamp_x := _size.x * float(config.get("lamp_x", 0.3))
-		var post := Polygon2D.new()
-		post.polygon = PackedVector2Array([
-			Vector2(lamp_x - 3, _ground_y),
-			Vector2(lamp_x - 3, _ground_y - _size.y * 0.42),
-			Vector2(lamp_x + 3, _ground_y - _size.y * 0.42),
-			Vector2(lamp_x + 3, _ground_y),
-		])
-		post.color = Palette.INK
-		post.z_index = -10
-		add_child(post)
-		var bulb_pos := Vector2(lamp_x, _ground_y - _size.y * 0.42)
-		var bulb := Sprite2D.new()
-		bulb.texture = FXUtil.soft_dot_texture(48)
-		bulb.modulate = Color(1.6, 1.4, 1.0)  # > 1 so it blooms
-		bulb.position = bulb_pos
-		add_child(bulb)
-		_make_light(bulb_pos, Color(1.0, 0.86, 0.6), 1.6, 4.0, true)
-
-	# neon sign: emissive body + coloured light + wet-floor reflection
-	if config.has("neon"):
-		var n: Dictionary = config["neon"]
-		var nx := _size.x * float(n.get("x", 0.66))
-		var ny := _size.y * float(n.get("y", 0.42))
-		var ncol: Color = n.get("color", Palette.RED_HOT)
-		var body := Polygon2D.new()
-		body.polygon = PackedVector2Array([
-			Vector2(nx - 70, ny - 22), Vector2(nx + 70, ny - 22),
-			Vector2(nx + 70, ny + 22), Vector2(nx - 70, ny + 22),
-		])
-		body.color = ncol * 1.8  # HDR for bloom
-		add_child(body)
-		_make_light(Vector2(nx, ny), ncol, 2.0, 3.2, false)
-		# reflection streak on the wet floor
-		var refl := Sprite2D.new()
-		refl.texture = FXUtil.radial_light_texture(128)
-		refl.modulate = Color(ncol.r, ncol.g, ncol.b, 0.5)
-		refl.position = Vector2(nx, _ground_y + (_size.y - _ground_y) * 0.35)
-		refl.scale = Vector2(1.2, (_size.y - _ground_y) / 64.0)
-		refl.z_index = -40
-		add_child(refl)
-
-	# searchlight beam (rooftop scenes)
-	if bool(config.get("searchlight", false)):
-		var beam := Polygon2D.new()
-		beam.polygon = PackedVector2Array([
-			Vector2(_size.x * 0.5, _size.y),
-			Vector2(_size.x * 0.5 - 70, 0),
-			Vector2(_size.x * 0.5 + 70, 0),
-		])
-		beam.color = Color(0.75, 0.8, 0.86, 0.08)
-		beam.z_index = -85
-		add_child(beam)
-
-
-# --- figure -------------------------------------------------------------
-
-func _build_figure() -> void:
-	var fx := _size.x * float(config.get("figure_x", 0.52))
-	var poly := PackedVector2Array([
-		Vector2(fx - 22, _ground_y),
-		Vector2(fx - 18, _ground_y - 92),
-		Vector2(fx - 26, _ground_y - 96),
-		Vector2(fx - 13, _ground_y - 120),  # hat brim left
-		Vector2(fx - 10, _ground_y - 132),
-		Vector2(fx + 10, _ground_y - 132),
-		Vector2(fx + 13, _ground_y - 120),  # hat brim right
-		Vector2(fx + 26, _ground_y - 96),
-		Vector2(fx + 18, _ground_y - 92),
-		Vector2(fx + 22, _ground_y),
-	])
-	var fig := Polygon2D.new()
-	fig.polygon = poly
-	fig.color = Palette.INK
-	fig.z_index = 5
-	add_child(fig)
-
-	# real cast shadow: an occluder matching the silhouette
-	var occ := LightOccluder2D.new()
-	var op := OccluderPolygon2D.new()
-	op.polygon = poly
-	op.closed = true
-	occ.occluder = op
-	add_child(occ)
-
-	# selective-colour accent (a red scarf) that survives the desaturation
-	if bool(config.get("red_accent", true)):
-		var scarf := Polygon2D.new()
-		scarf.polygon = PackedVector2Array([
-			Vector2(fx - 12, _ground_y - 96),
-			Vector2(fx + 12, _ground_y - 96),
-			Vector2(fx + 8, _ground_y - 84),
-			Vector2(fx - 8, _ground_y - 84),
-		])
-		scarf.color = Palette.RED_HOT
-		scarf.z_index = 6
-		add_child(scarf)
-
-
-# --- weather ------------------------------------------------------------
-
-func _build_rain() -> void:
-	_rain = GPUParticles2D.new()
-	_rain.texture = FXUtil.streak_texture()
-	_rain.amount = 420
-	_rain.lifetime = 1.1
-	_rain.preprocess = 1.1
-	_rain.position = Vector2(_size.x * 0.5, -20)
-	_rain.z_index = 50
-	var pm := ParticleProcessMaterial.new()
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	pm.emission_box_extents = Vector3(_size.x * 0.75, 4, 0)
-	pm.direction = Vector3(-0.25, 1, 0)
-	pm.spread = 2.0
-	pm.initial_velocity_min = 900.0
-	pm.initial_velocity_max = 1150.0
-	pm.gravity = Vector3(0, 600, 0)
-	pm.scale_min = 0.7
-	pm.scale_max = 1.3
-	var rc := Palette.RED if _red_rain else Color(0.78, 0.84, 0.95)
-	pm.color = Color(rc.r, rc.g, rc.b, Palette.RAIN_ALPHA)
-	_rain.process_material = pm
-	add_child(_rain)
-
-
-func _build_fog() -> void:
-	var fog := GPUParticles2D.new()
-	fog.texture = FXUtil.soft_dot_texture(128)
-	fog.amount = 22
-	fog.lifetime = 9.0
-	fog.preprocess = 9.0
-	fog.position = Vector2(_size.x * 0.5, _ground_y - 30)
-	fog.z_index = 40
-	var pm := ParticleProcessMaterial.new()
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	pm.emission_box_extents = Vector3(_size.x * 0.6, 30, 0)
-	pm.direction = Vector3(1, 0, 0)
-	pm.spread = 10.0
-	pm.initial_velocity_min = 8.0
-	pm.initial_velocity_max = 22.0
-	pm.gravity = Vector3.ZERO
-	pm.scale_min = 6.0
-	pm.scale_max = 12.0
-	pm.color = Color(0.7, 0.75, 0.85, 0.05)
-	fog.process_material = pm
-	fog.material = _additive_canvas_material()
-	add_child(fog)
-
-
-func _additive_canvas_material() -> CanvasItemMaterial:
-	var m := CanvasItemMaterial.new()
-	m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	return m
-
-
-# --- fx events ----------------------------------------------------------
-
-func _build_lightning_nodes() -> void:
-	_flash = Sprite2D.new()
-	_flash.texture = _white_texture()
-	_flash.centered = false
-	_flash.scale = _size
-	_flash.modulate = Color(1, 1, 1, 0)
-	_flash.z_index = 60
-	_flash.material = _additive_canvas_material()
-	add_child(_flash)
-
-	_bolt = Line2D.new()
-	_bolt.width = 3.0
-	_bolt.default_color = Color(0.85, 0.92, 1.0)
-	_bolt.z_index = 61
-	_bolt.visible = false
-	add_child(_bolt)
-
-	_lightning_light = _make_light(Vector2(_size.x * 0.5, _size.y * 0.1), Color(0.8, 0.88, 1.0), 0.0, 9.0, false)
-
-
-func _white_texture() -> ImageTexture:
-	var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
-	img.set_pixel(0, 0, Color.WHITE)
-	return ImageTexture.create_from_image(img)
+func set_line(idx: int) -> void:
+	_scene.set_line(idx, _frame)
 
 
 func on_fx(name: String) -> void:
 	match name:
-		"lightning":
-			_strike_lightning()
 		"muzzle":
-			AudioDirector.gun()
-			_flash.modulate.a = 0.5
-			create_tween().tween_property(_flash, "modulate:a", 0.0, 0.4)
-			shake_requested.emit(8.0)
+			_scene.flags["muzzle"] = 1.0
+			_scene.fire_gun(_frame, self)
+			shake_requested.emit(6.0)
 		"blood":
-			_red_rain = true
-			if _rain:
-				var pm: ParticleProcessMaterial = _rain.process_material
-				pm.color = Color(Palette.RED.r, Palette.RED.g, Palette.RED.b, Palette.RAIN_ALPHA + 0.2)
+			_scene.flags["blood"] = true
+			_scene.flags["_blood_t"] = _frame.t
+		"lightning":
+			_scene.lightning = maxf(_scene.lightning, 0.8)
+			if randf() < 0.85:
+				_scene.bolt_seed = randi()
+			get_tree().create_timer(0.2 + randf() * 0.4).timeout.connect(AudioDirector.thunder)
+		"hammer":
+			AudioDirector.gun_cock()
 		"lighter":
 			AudioDirector.lid_open()
 			get_tree().create_timer(0.65).timeout.connect(AudioDirector.flint)
 
 
-func _strike_lightning() -> void:
-	if bool(config.get("indoor", false)):
+# --- paint passes --------------------------------------------------------------------------
+
+func _paint_world(canvas: CanvasItem) -> void:
+	_frame.begin(canvas, true)
+	_frame.glows.clear()
+	_draw_sky(_frame)
+	_scene.draw_back(_frame)
+	_scene.draw_backdrop(_frame)
+	_scene.draw_fixtures(_frame)
+	_scene.draw_objects(_frame)
+
+
+func _paint_light(canvas: CanvasItem) -> void:
+	_frame.begin(canvas, false)
+	NoirLight.draw_light_layer(_frame)
+	_frame.replay_glows()
+	_scene.draw_light_extras(_frame)
+
+
+func _paint_weather(canvas: CanvasItem) -> void:
+	_frame.begin(canvas, false)
+	if _scene.indoor:
+		_scene.lightning = 0.0
 		return
-	var x := _rng.randf_range(_size.x * 0.25, _size.x * 0.75)
-	var pts := PackedVector2Array([Vector2(x, 0)])
+	_draw_rain(_frame, _scene.blood_rain)
+	if _scene.bolt_seed != null:
+		_draw_bolt(_frame, int(_scene.bolt_seed))
+	if _scene.lightning > 0.0:
+		_frame.fill_rect(0, 0, _frame.W, _frame.H, Color(1, 1, 1, _scene.lightning * 0.5))
+
+
+# --- sky (port of render/passes/sky.js) ----------------------------------------------------
+
+func _emit_sky_light(f: NoirFrame) -> void:
+	if _scene.indoor:
+		return
+	var m = _scene.moon if _scene.moon != null else {"x": 0.78, "y": 0.18}
+	var mx: float = m["x"] * f.W + f.look * 0.1
+	var my: float = m["y"] * f.H
+	if my < f.gy:
+		f.add_light({
+			"x": mx, "y": my, "col": Color(210.0 / 255.0, 222.0 / 255.0, 245.0 / 255.0),
+			"r": f.H * 0.62, "I": 0.3, "glow": false,
+			"refl_w": 26.0, "refl_i": 0.13, "refl_len": 0.8,
+		})
+
+
+func _draw_sky(f: NoirFrame) -> void:
+	f.fill_rect_vgrad3(0, 0, f.W, f.H, Palette.SKY_TOP, Palette.SKY_MID, Palette.SKY_LOW, 0.55)
+	for i in 40:
+		var sx := fmod(i * 197.3, f.W)
+		var sy := fmod(i * 91.7, f.H * 0.4)
+		if (i * 13) % 5 == 0:
+			f.fill_rect(sx, sy, 1.4, 1.4, Color(200.0 / 255.0, 210.0 / 255.0, 230.0 / 255.0, 0.5))
+	if _scene.indoor:
+		return
+	var m = _scene.moon if _scene.moon != null else {"x": 0.78, "y": 0.18}
+	var mx: float = m["x"] * f.W + f.look * 0.1
+	var my: float = m["y"] * f.H
+	var mr := 34.0
+	f.fill_radial(mx, my, mr, Color("f6f8fc"), Color("bcc4d4"))
+	var crater := Color(116.0 / 255.0, 128.0 / 255.0, 152.0 / 255.0, 0.55)
+	f.circle(mx - 9, my - 5, 6, crater)
+	f.circle(mx + 11, my + 9, 8, crater)
+	f.circle(mx + 5, my - 13, 3.5, crater)
+	f.circle(mx - 13, my + 11, 4, crater)
+	# halo ring, additive on the light layer (registered as a deferred glow during the world pass)
+	f.glow_radial(mx, my, 94.0, Color(210.0 / 255.0, 222.0 / 255.0, 245.0 / 255.0), 0.22)
+
+
+# --- weather (port of render/passes/weather.js) --------------------------------------------
+
+func _init_rain() -> void:
+	_drops.clear()
+	var n := int((_size.x * _size.y) / 5200.0)
+	for i in n:
+		_drops.append({
+			"x": randf() * (_size.x + 200.0) - 100.0,
+			"y": randf() * _size.y,
+			"len": 8.0 + randf() * 16.0,
+			"sp": 9.0 + randf() * 9.0,
+		})
+
+
+func _draw_rain(f: NoirFrame, blood_rain: bool) -> void:
+	var lit := not blood_rain and not f.lights.is_empty()
+	var base_col := Color(168.0 / 255.0, 8.0 / 255.0, 16.0 / 255.0, Palette.RAIN_ALPHA + 0.22) if blood_rain else Color(180.0 / 255.0, 190.0 / 255.0, 210.0 / 255.0, Palette.RAIN_ALPHA)
+	var width := 1.6 if blood_rain else 1.1
+	var drift := []
+	drift.resize(_drops.size())
+	for i in _drops.size():
+		var d: Dictionary = _drops[i]
+		d["y"] += d["sp"] * f.dt * 60.0
+		d["x"] -= d["sp"] * f.dt * 21.0
+		if d["y"] > f.H:
+			d["y"] = -10.0
+			d["x"] = randf() * (f.H + 200.0) - 50.0
+		var bi := -1
+		if lit:
+			var bw := 0.3
+			for k in f.lights.size():
+				var L: Dictionary = f.lights[k]
+				var w: float = L["I"] * (1.0 - Vector2(d["x"] - L["x"], (d["y"] - L["y"]) * 0.6).length() / L["r"])
+				if w > bw:
+					bw = w
+					bi = k
+		drift[i] = bi
+		if bi < 0:
+			f.line(Vector2(d["x"], d["y"]), Vector2(d["x"] - d["len"] * 0.35, d["y"] + d["len"]), base_col, width)
+	if lit:
+		for k in f.lights.size():
+			var L: Dictionary = f.lights[k]
+			var lc: Color = L["col"]
+			var col := Color(lc.r, lc.g, lc.b, Palette.RAIN_ALPHA + 0.1)
+			for i in _drops.size():
+				if drift[i] == k:
+					var d: Dictionary = _drops[i]
+					f.line(Vector2(d["x"], d["y"]), Vector2(d["x"] - d["len"] * 0.35, d["y"] + d["len"]), col, width)
+
+
+func _draw_bolt(f: NoirFrame, seed_value: int) -> void:
+	var rng := NoirMath.rand32(seed_value)
+	var x := f.W * (0.2 + rng.nextf() * 0.6)
 	var y := 0.0
-	while y < _size.y * 0.6:
-		x += _rng.randf_range(-50, 50)
-		y += _size.y * 0.6 / 9.0
+	var pts := PackedVector2Array([Vector2(x, y)])
+	var segs := 9 + int(rng.nextf() * 5.0)
+	for i in segs:
+		x += (rng.nextf() - 0.5) * 70.0
+		y += f.H * 0.55 / float(segs)
 		pts.append(Vector2(x, y))
-	_bolt.points = pts
-	_bolt.visible = true
-	_flash.modulate.a = 0.55
-	_lightning_light.position = Vector2(x, _size.y * 0.1)
-	_lightning_light.energy = 2.2
-	var tw := create_tween()
-	tw.tween_property(_flash, "modulate:a", 0.0, 0.45)
-	tw.parallel().tween_property(_lightning_light, "energy", 0.0, 0.45)
-	tw.tween_callback(func(): _bolt.visible = false)
-	get_tree().create_timer(0.2 + _rng.randf() * 0.3).timeout.connect(AudioDirector.thunder)
+	f.stroke_poly(pts, Color(1, 1, 1, 0.95), 2.5, false, true)
+	# a soft glow along the bolt
+	for p in pts:
+		f.glow_radial(p.x, p.y, 10.0, Color(0.81, 0.88, 1.0), 0.5)
