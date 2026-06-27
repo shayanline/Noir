@@ -3,6 +3,8 @@ extends Node2D
 ## camera and the post FX material) is authored in Main.tscn, so this script only drives the flow:
 ## it reads GameState, swaps the Board for each act, runs Transitions and cues audio, and feeds the
 ## post shader its runtime parameters. The board renders itself with native nodes and 2D lights.
+## It also serves the HUD: pause (freeze the board and suspend sound), leave to the start screen,
+## and pull a poster from the live frame.
 
 const BOARD_SCENE := preload("res://scenes/board/Board.tscn")
 
@@ -17,6 +19,7 @@ var _board: Board
 var _playing := false
 var _busy := false
 var _ended := false
+var _paused := false
 var _shake := 0.0
 
 
@@ -27,6 +30,9 @@ func _ready() -> void:
 
 	_start.entered.connect(_on_enter)
 	_hud.nav_selected.connect(_on_nav_selected)
+	_hud.pause_changed.connect(_on_pause_changed)
+	_hud.exit_requested.connect(_on_exit_requested)
+	_hud.poster_requested.connect(_on_poster_requested)
 	get_viewport().size_changed.connect(_on_resize)
 
 
@@ -55,6 +61,7 @@ func _enter_act(index: int, first: bool) -> void:
 	_cue_audio(act)
 	AudioDirector.whoosh()
 	_hud.set_scene_tag(act.title)
+	_hud.set_current_act(GameState.act_index)
 	GameState.notify_line()
 	_fire_line_fx()
 	_busy = false
@@ -89,7 +96,7 @@ func _fire_line_fx() -> void:
 
 
 func advance() -> void:
-	if not _playing or _busy or _ended:
+	if not _playing or _busy or _ended or _paused:
 		return
 	if GameState.has_next_line():
 		AudioDirector.duck(0.45)
@@ -119,6 +126,7 @@ func _enter_act_covered(index: int) -> void:
 	_zoom_in()
 	_cue_audio(act)
 	_hud.set_scene_tag(act.title)
+	_hud.set_current_act(GameState.act_index)
 	GameState.notify_line()
 	_fire_line_fx()
 	_busy = false
@@ -136,7 +144,7 @@ func _end_story() -> void:
 		_board = null
 	AudioDirector.whoosh()
 	await Transitions.show_end()
-	_hud.show_nav(true)
+	_hud.end_reached()
 	_busy = false
 
 
@@ -144,11 +152,146 @@ func _on_nav_selected(index: int) -> void:
 	if _busy:
 		return
 	_ended = false
-	_hud.show_nav(false)
+	_hud.resume_from_end()
 	Transitions.hide_end()
-	_hud.set_tap_visible(true)
 	await _to_act(index)
 	_playing = true
+
+
+# --- HUD service ---------------------------------------------------------------------------
+
+func _on_pause_changed(p: bool) -> void:
+	_paused = p
+	if _board:
+		_board.process_mode = Node.PROCESS_MODE_DISABLED if p else Node.PROCESS_MODE_INHERIT
+	AudioDirector.set_suspended(p)
+
+
+func _on_exit_requested() -> void:
+	_playing = false
+	_ended = false
+	_busy = false
+	_paused = false
+	if _board:
+		_board.process_mode = Node.PROCESS_MODE_INHERIT
+		_board.queue_free()
+		_board = null
+	Transitions.clear()
+	_hud.hide_caption()
+	AudioDirector.reset()
+	if GameState.story:
+		GameState.load_story(GameState.story)
+	_camera.zoom = Vector2.ONE
+	_start.visible = true
+
+
+func _on_poster_requested() -> void:
+	if not _playing:
+		return
+	_hud.visible = false
+	await RenderingServer.frame_post_draw
+	var frame := get_viewport().get_texture().get_image()
+	_hud.visible = true
+	var poster := await _compose_poster(frame)
+	_hud.show_poster(poster[0], poster[1])
+
+
+## compose a downloadable noir poster from the captured frame: an inked white border, the NOIR
+## wordmark, the current caption as the tagline, and a footer. Built in a SubViewport so it uses the
+## shared fonts and renders to a saveable image.
+func _compose_poster(frame: Image) -> Array:
+	var pw := 900
+	var margin := 56
+	var fw := pw - margin * 2
+	var vp := get_viewport_rect().size
+	var fh := int(fw * vp.y / vp.x)
+	var fy := 150
+	var ph := fy + fh + 170
+
+	var sv := SubViewport.new()
+	sv.size = Vector2i(pw, ph)
+	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(sv)
+
+	var root := Control.new()
+	root.size = Vector2(pw, ph)
+	sv.add_child(root)
+
+	var bg := ColorRect.new()
+	bg.color = Color.BLACK
+	bg.size = Vector2(pw, ph)
+	root.add_child(bg)
+
+	var title := HBoxContainer.new()
+	title.anchor_right = 1.0
+	title.offset_top = 64.0
+	title.alignment = BoxContainer.ALIGNMENT_CENTER
+	title.add_theme_constant_override("separation", 0)
+	root.add_child(title)
+	title.add_child(_poster_word("NO", Color(1, 1, 1, 1)))
+	title.add_child(_poster_word("IR", Color(0.882, 0, 0.063, 1)))
+
+	var pic := TextureRect.new()
+	pic.texture = ImageTexture.create_from_image(frame)
+	pic.position = Vector2(margin, fy)
+	pic.size = Vector2(fw, fh)
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	pic.clip_contents = true
+	root.add_child(pic)
+
+	var border := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	sb.set_border_width_all(5)
+	sb.border_color = Color(1, 1, 1, 1)
+	border.add_theme_stylebox_override("panel", sb)
+	border.position = Vector2(margin, fy)
+	border.size = Vector2(fw, fh)
+	root.add_child(border)
+
+	var tag := Label.new()
+	tag.theme_type_variation = &"MenuRole"
+	tag.add_theme_font_size_override("font_size", 24)
+	tag.add_theme_color_override("font_color", Color(0.847, 0.831, 0.784, 1))
+	tag.position = Vector2(margin, fy + fh + 26)
+	tag.size = Vector2(fw, 0)
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tag.text = _poster_tagline()
+	root.add_child(tag)
+
+	var foot := Label.new()
+	foot.theme_type_variation = &"TapNote"
+	foot.add_theme_font_size_override("font_size", 13)
+	foot.position = Vector2(0, ph - 46)
+	foot.size = Vector2(pw, 0)
+	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	foot.text = "BASIN CITY  ·  NOIR"
+	root.add_child(foot)
+
+	await RenderingServer.frame_post_draw
+	var img := sv.get_texture().get_image()
+	var tex := ImageTexture.create_from_image(img)
+	sv.queue_free()
+	return [tex, img]
+
+
+func _poster_word(text: String, col: Color) -> Label:
+	var lbl := Label.new()
+	lbl.theme_type_variation = &"Title"
+	lbl.add_theme_font_size_override("font_size", 80)
+	lbl.add_theme_color_override("font_color", col)
+	lbl.text = text
+	return lbl
+
+
+func _poster_tagline() -> String:
+	var line := GameState.current_line()
+	var s := line.text if line else ""
+	if s == "" and GameState.story:
+		s = GameState.story.subtitle
+	s = s.replace("<b>", "").replace("</b>", "")
+	return s.to_upper()
 
 
 func _process(delta: float) -> void:
@@ -162,7 +305,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _playing or _busy:
+	if not _playing or _busy or _paused:
 		return
 	if event.is_action_pressed("advance"):
 		advance()

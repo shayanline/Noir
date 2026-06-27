@@ -30,11 +30,12 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="Title" type="HBoxContainer" parent="Center/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 0
 alignment = 1
 
 [node name="Head" type="Label" parent="Center/VBox/Title"]
@@ -55,14 +56,14 @@ theme_type_variation = &"Subtitle"
 horizontal_alignment = 1
 
 [node name="Blurb" type="Label" parent="Center/VBox"]
-custom_minimum_size = Vector2(990, 0)
+custom_minimum_size = Vector2(600, 0)
 layout_mode = 2
 theme_type_variation = &"Blurb"
 horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Spacer1" type="Control" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 33)
+custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 
 [node name="Heading" type="Label" parent="Center/VBox"]
@@ -71,16 +72,17 @@ theme_type_variation = &"Heading"
 text = "CHOOSE YOUR TALE"
 horizontal_alignment = 1
 
-[node name="Tales" type="VBoxContainer" parent="Center/VBox"]
+[node name="Tales" type="HBoxContainer" parent="Center/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 18
 alignment = 1
 
 [node name="Spacer2" type="Control" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 27)
+custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 
 [node name="Enter" type="Button" parent="Center/VBox"]
 layout_mode = 2
-theme_type_variation = &"ChoiceButton"
+size_flags_horizontal = 4
+theme_type_variation = &"EnterButton"
 text = "ENTER THE CITY"

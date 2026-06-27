@@ -178,6 +178,33 @@ func is_on() -> bool:
 	return not _muted
 
 
+# --- pause + reset ------------------------------------------------------
+
+## freeze or thaw every player so the pause menu is a true pause of sound, not just a duck.
+func set_suspended(s: bool) -> void:
+	for p in [_music, _rain, _amb]:
+		p.stream_paused = s
+	for key in _loops:
+		_loops[key].stream_paused = s
+	for p in _sfx_pool:
+		p.stream_paused = s
+
+
+## stop everything and return to the unstarted state, so leaving a story leaves no sound ringing.
+func reset() -> void:
+	set_suspended(false)
+	for p in [_music, _rain, _amb]:
+		p.stop()
+		p.stream = null
+		p.volume_db = SILENCE_DB
+	for key in _loops:
+		_loops[key].stop()
+	_loops.clear()
+	for p in _sfx_pool:
+		p.stop()
+	_started = false
+
+
 # --- named convenience shots (match Inkfall) ----------------------------
 
 func gun() -> void: play("gunshot", 1.0, randf_range(0.97, 1.03))

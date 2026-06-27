@@ -49,3 +49,10 @@ func show_end() -> void:
 
 func hide_end() -> void:
 	_end.modulate.a = 0.0
+
+
+## clear every overlay at once (used when leaving a story mid play), so the screen is clean.
+func clear() -> void:
+	_set_progress(0.0)
+	_card.modulate.a = 0.0
+	_end.modulate.a = 0.0
