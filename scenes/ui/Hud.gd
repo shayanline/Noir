@@ -56,6 +56,9 @@ var _poster_image: Image
 
 
 func _ready() -> void:
+	# the pause menu lives here, so the HUD must keep processing input while the rest of the tree is
+	# paused (Main pauses the whole tree on pause), otherwise the menu could never be dismissed.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_scene_tag()
 	_build_caption()
 	_build_tap()

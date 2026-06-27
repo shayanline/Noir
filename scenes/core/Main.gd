@@ -261,9 +261,10 @@ func _on_nav_selected(index: int) -> void:
 # --- HUD service ---------------------------------------------------------------------------
 
 func _on_pause_changed(p: bool) -> void:
+	# a real pause: freeze the whole tree so the camera push in, the board, the weather and the post
+	# clock all stop together (the HUD stays live via PROCESS_MODE_ALWAYS, so the menu still works).
 	_paused = p
-	if _board:
-		_board.process_mode = Node.PROCESS_MODE_DISABLED if p else Node.PROCESS_MODE_INHERIT
+	get_tree().paused = p
 	AudioDirector.set_suspended(p)
 
 
@@ -272,8 +273,8 @@ func _on_exit_requested() -> void:
 	_ended = false
 	_busy = false
 	_paused = false
+	get_tree().paused = false
 	if _board:
-		_board.process_mode = Node.PROCESS_MODE_INHERIT
 		_board.queue_free()
 		_board = null
 	Transitions.clear()
