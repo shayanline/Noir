@@ -126,12 +126,10 @@ These apply to docs, code comments, commit messages and the in app copy. They do
 
 ## Git
 
-- Work on `master` directly. Keep each change focused.
+- Work on a branch off `master`, in a dedicated git worktree, never directly in the shared
+  checkout. Name branches by intent, for example `fix/mobile-flicker` or `feat/clip-system`.
+- Open a pull request into `master` for review, then merge once it looks good. Keep each change
+  focused so it is easy to review.
 - Commits are authored under the maintainer's name only, with no AI or bot co-author trailers.
-- Do not push unless asked. Never force push or rewrite shared history, and never resolve a merge
-  conflict without checking first.
-
-## Verify
-
-No test suite. Run the headless parse check above and confirm a clean console, then run it windowed,
-pick each tale, and tap through the acts watching for errors and that the look holds.
+- Do not push or merge unless asked. Never force push or rewrite shared history, and never resolve a
+  merge conflict without checking first.
