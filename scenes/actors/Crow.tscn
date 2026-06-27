@@ -1,7 +1,105 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/actors/Crow.gd" id="1"]
 
+[sub_resource type="Animation" id="anim_perch"]
+resource_name = "perch"
+length = 2.8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Art/Wing:polygon")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.7, 1.4, 2.1, 2.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.518, 4.36, -2.032, 5.51, -2.542, 6.64, -3.048, 7.75, -3.55, 8.84, -4.048, 9.91, -4.542, 10.96, -5.032, 11.99, -5.518, 13.0, -6.0, 12.0, -4.665, 11.0, -3.46, 10.0, -2.385, 9.0, -1.44, 8.0, -0.625, 7.0, 0.06, 6.0, 0.615, 5.0, 1.04, 4.0, 1.335, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.518, 4.36, -2.032, 5.51, -2.542, 6.64, -3.048, 7.75, -3.55, 8.84, -4.048, 9.91, -4.542, 10.96, -5.032, 11.99, -5.518, 13.0, -6.0, 12.0, -4.665, 11.0, -3.46, 10.0, -2.385, 9.0, -1.44, 8.0, -0.625, 7.0, 0.06, 6.0, 0.615, 5.0, 1.04, 4.0, 1.335, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Art/Tail:polygon")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.7, 1.4, 2.1, 2.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [PackedVector2Array(5.0, -1.0, 6.17, -0.61, 7.28, -0.24, 8.33, 0.11, 9.32, 0.44, 10.25, 0.75, 11.12, 1.04, 11.93, 1.31, 12.68, 1.56, 13.37, 1.79, 14.0, 2.0, 5.0, 2.0), PackedVector2Array(5.0, -1.0, 6.17, -0.192, 7.28, 0.552, 8.33, 1.232, 9.32, 1.848, 10.25, 2.4, 11.12, 2.888, 11.93, 3.312, 12.68, 3.672, 13.37, 3.968, 14.0, 4.2, 5.0, 2.0), PackedVector2Array(5.0, -1.0, 6.17, -0.61, 7.28, -0.24, 8.33, 0.11, 9.32, 0.44, 10.25, 0.75, 11.12, 1.04, 11.93, 1.31, 12.68, 1.56, 13.37, 1.79, 14.0, 2.0, 5.0, 2.0), PackedVector2Array(5.0, -1.0, 6.17, -1.028, 7.28, -1.032, 8.33, -1.012, 9.32, -0.968, 10.25, -0.9, 11.12, -0.808, 11.93, -0.692, 12.68, -0.552, 13.37, -0.388, 14.0, -0.2, 5.0, 2.0), PackedVector2Array(5.0, -1.0, 6.17, -0.61, 7.28, -0.24, 8.33, 0.11, 9.32, 0.44, 10.25, 0.75, 11.12, 1.04, 11.93, 1.31, 12.68, 1.56, 13.37, 1.79, 14.0, 2.0, 5.0, 2.0)]
+}
+
+[sub_resource type="Animation" id="anim_fly"]
+resource_name = "fly"
+length = 4.0
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Art:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(640, -432)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".:modulate:a")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [1.0, 0.0]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Art/Leg:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Art/Wing:polygon")
+tracks/3/interp = 2
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.65, 1.3, 1.95, 2.6, 3.25, 3.9),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -2.58, 4.36, -4.12, 5.51, -5.62, 6.64, -7.08, 7.75, -8.5, 8.84, -9.88, 9.91, -11.22, 10.96, -12.52, 11.99, -13.78, 13.0, -15.0, 12.0, -11.955, 11.0, -9.22, 10.0, -6.795, 9.0, -4.68, 8.0, -2.875, 7.0, -1.38, 6.0, -0.195, 5.0, 0.68, 4.0, 1.245, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -2.58, 4.36, -4.12, 5.51, -5.62, 6.64, -7.08, 7.75, -8.5, 8.84, -9.88, 9.91, -11.22, 10.96, -12.52, 11.99, -13.78, 13.0, -15.0, 12.0, -11.955, 11.0, -9.22, 10.0, -6.795, 9.0, -4.68, 8.0, -2.875, 7.0, -1.38, 6.0, -0.195, 5.0, 0.68, 4.0, 1.245, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -2.58, 4.36, -4.12, 5.51, -5.62, 6.64, -7.08, 7.75, -8.5, 8.84, -9.88, 9.91, -11.22, 10.96, -12.52, 11.99, -13.78, 13.0, -15.0, 12.0, -11.955, 11.0, -9.22, 10.0, -6.795, 9.0, -4.68, 8.0, -2.875, 7.0, -1.38, 6.0, -0.195, 5.0, 0.68, 4.0, 1.245, 3.0, 1.5), PackedVector2Array(2.0, -1.0, 3.19, -1.046, 4.36, -1.104, 5.51, -1.174, 6.64, -1.256, 7.75, -1.35, 8.84, -1.456, 9.91, -1.574, 10.96, -1.704, 11.99, -1.846, 13.0, -2.0, 12.0, -1.425, 11.0, -0.9, 10.0, -0.425, 9.0, 0.0, 8.0, 0.375, 7.0, 0.7, 6.0, 0.975, 5.0, 1.2, 4.0, 1.375, 3.0, 1.5)]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Art/Tail:polygon")
+tracks/4/interp = 2
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [PackedVector2Array(5.0, -1.0, 6.17, -0.61, 7.28, -0.24, 8.33, 0.11, 9.32, 0.44, 10.25, 0.75, 11.12, 1.04, 11.93, 1.31, 12.68, 1.56, 13.37, 1.79, 14.0, 2.0, 5.0, 2.0)]
+}
+
+[sub_resource type="AnimationLibrary" id="anim_lib"]
+_data = {
+&"perch": SubResource("anim_perch"),
+&"fly": SubResource("anim_fly")
+}
 [node name="Crow" type="Node2D"]
 script = ExtResource("1")
 
@@ -31,3 +129,9 @@ polygon = PackedVector2Array(2, -1, 3.19, -1.2820001, 4.3599997, -1.568, 5.51, -
 [node name="Leg" type="Polygon2D" parent="Art"]
 color = Color(0.007843138, 0.007843138, 0.011764706, 1)
 polygon = PackedVector2Array(1, 4, 2.4, 4, 2.4, 9, 1, 9)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("anim_lib")
+}
+autoplay = "perch"
