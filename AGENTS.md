@@ -113,7 +113,9 @@ simple emphasis, `<b>..</b>` prints in blood red, and `fx` fires `muzzle`, `bloo
 
 ## Output rules (apply to ALL written output)
 
-These apply to docs, code comments, commit messages and the in app copy. They do not apply to code.
+These apply to everything you write in this project: docs, code comments, commit messages, the in
+app copy, and the story captions, subtitles and blurbs you write, including the prose inside any
+examples. The only place they do not apply is code itself.
 
 1. Never use the em dash or en dash. Use a comma, colon, parentheses, or a full stop. Rewrite the
    sentence if needed.
