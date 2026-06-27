@@ -17,7 +17,8 @@ const _SCRIM := Color(0, 0, 0, 0.92)
 const _CELL := 44.0
 const _GAP := 6
 const _EDGE := 20.0
-const _CAP_VP := Vector2i(1200, 240)   # the caption render target, the panel hugs its text inside it
+const _CAP_VP := Vector2i(1200, 360)   # the caption render target, tall enough that a multi line panel
+                                       # (anchored at the bottom, growing up) never clips against the top
 const _CAP_IN := 1.15                  # narration torn reveal in (s)
 const _CAP_OUT := 0.46                 # narration torn wipe out (s)
 const _CAP_VARIANTS := 3
