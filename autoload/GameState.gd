@@ -68,5 +68,5 @@ func act_titles() -> Array[String]:
 
 
 ## fired by Main when a line carries fx, so any object on the board can react.
-func fire_fx(name: String) -> void:
-	fx_fired.emit(name)
+func fire_fx(event: String) -> void:
+	fx_fired.emit(event)

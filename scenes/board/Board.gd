@@ -126,8 +126,8 @@ func set_line(idx: int) -> void:
 		o.on_line(idx)
 
 
-func on_fx(name: String) -> void:
-	match name:
+func on_fx(event: String) -> void:
+	match event:
 		"muzzle":
 			flags["muzzle"] = true
 			shake_requested.emit(6.0)
@@ -138,5 +138,5 @@ func on_fx(name: String) -> void:
 				_lightning.strike()
 	for o in _objects:
 		o.on_flags_changed()
-		o.on_fx(name)
-	GameState.fire_fx(name)
+		o.on_fx(event)
+	GameState.fire_fx(event)

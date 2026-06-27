@@ -94,11 +94,11 @@ func start() -> void:
 	_started = true
 
 
-func play_music(name: String, vol := 0.5) -> void:
-	if not MUSIC.has(name):
+func play_music(key: String, vol := 0.5) -> void:
+	if not MUSIC.has(key):
 		return
 	_music_vol = vol
-	_music.stream = _load_loop(MUSIC[name])
+	_music.stream = _load_loop(MUSIC[key])
 	_music.volume_db = SILENCE_DB
 	_music.play()
 	if _started:
@@ -128,12 +128,12 @@ func enter_scene(ambience := "", indoor := false, ambience_vol := 0.4, rain_vol 
 
 # --- one-shots ----------------------------------------------------------
 
-func play(name: String, vol_scale := 1.0, pitch := 1.0) -> void:
-	if _muted or not _started or not SFX.has(name):
+func play(key: String, vol_scale := 1.0, pitch := 1.0) -> void:
+	if _muted or not _started or not SFX.has(key):
 		return
 	var p := _sfx_pool[_sfx_next % _sfx_pool.size()]
 	_sfx_next += 1
-	p.stream = load(SFX[name])
+	p.stream = load(SFX[key])
 	p.pitch_scale = pitch
 	p.volume_db = _linear_to_db(0.7 * vol_scale)
 	p.play()
@@ -146,24 +146,24 @@ func duck(dur := 0.6) -> void:
 
 
 # loops tied to an animation (footsteps): held full while active, faded when it stops
-func set_loop(name: String, active: bool) -> void:
-	if not SFX.has(name):
+func set_loop(key: String, active: bool) -> void:
+	if not SFX.has(key):
 		return
 	if active:
-		var p: AudioStreamPlayer = _loops.get(name)
+		var p: AudioStreamPlayer = _loops.get(key)
 		if p == null:
 			p = _make_loop_player()
-			_loops[name] = p
-			p.stream = _load_loop(SFX[name])
+			_loops[key] = p
+			p.stream = _load_loop(SFX[key])
 			p.play()
 		p.volume_db = _linear_to_db(0.0 if _muted else 0.6)
-	elif _loops.has(name):
-		_fade(_loops[name], 0.0, 0.4)
+	elif _loops.has(key):
+		_fade(_loops[key], 0.0, 0.4)
 
 
 func stop_loops(dur := 0.45) -> void:
-	for name in _loops:
-		_fade(_loops[name], 0.0, dur)
+	for key in _loops:
+		_fade(_loops[key], 0.0, dur)
 
 
 # --- mute ---------------------------------------------------------------
