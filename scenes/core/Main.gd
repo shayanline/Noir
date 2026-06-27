@@ -1,13 +1,11 @@
 extends Node2D
-## The view controller. Configures the global wash (CanvasModulate), the bloom (WorldEnvironment),
-## the camera and the post FX, then drives the flow by reading GameState, swapping the Board for
-## each act, running Transitions and cueing audio. The board renders itself with native nodes and
-## 2D lights, so Main never paints.
+## The view controller. The global look (the CanvasModulate wash, the WorldEnvironment bloom, the
+## camera and the post FX material) is authored in Main.tscn, so this script only drives the flow:
+## it reads GameState, swaps the Board for each act, runs Transitions and cues audio, and feeds the
+## post shader its runtime parameters. The board renders itself with native nodes and 2D lights.
 
 const BOARD_SCENE := preload("res://scenes/board/Board.tscn")
 
-@onready var _wash: CanvasModulate = $CanvasModulate
-@onready var _world_env: WorldEnvironment = $WorldEnvironment
 @onready var _world: Node2D = $World
 @onready var _camera: Camera2D = $Camera2D
 @onready var _post: ColorRect = $PostLayer/Post
@@ -23,35 +21,13 @@ var _shake := 0.0
 
 
 func _ready() -> void:
-	_wash.color = Color(0.46, 0.48, 0.56)
-	_world_env.environment = _make_environment()
-	_post_mat = _make_post_material()
-	_post.material = _post_mat
+	_post_mat = _post.material
+	_post_mat.set_shader_parameter("screen_size", get_viewport_rect().size)
 	_camera.position = get_viewport_rect().size * 0.5
-	_camera.make_current()
 
 	_start.entered.connect(_on_enter)
 	_hud.nav_selected.connect(_on_nav_selected)
 	get_viewport().size_changed.connect(_on_resize)
-
-
-func _make_environment() -> Environment:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_CANVAS
-	env.glow_enabled = true
-	env.glow_intensity = 0.9
-	env.glow_strength = 1.1
-	env.glow_bloom = 0.2
-	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
-	env.glow_hdr_threshold = 1.0
-	return env
-
-
-func _make_post_material() -> ShaderMaterial:
-	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/post.gdshader")
-	m.set_shader_parameter("screen_size", get_viewport_rect().size)
-	return m
 
 
 # --- flow ----------------------------------------------------------------------------------

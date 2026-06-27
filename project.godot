@@ -41,6 +41,10 @@ project/assembly_name="Noir"
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
 
+[gui]
+
+theme/custom="res://ui/noir_theme.tres"
+
 [input]
 
 advance={

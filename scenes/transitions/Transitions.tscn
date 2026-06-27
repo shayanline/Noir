@@ -1,6 +1,45 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/transitions/Transitions.gd" id="1"]
+[ext_resource type="Material" path="res://scenes/transitions/ink_material.tres" id="2"]
 
 [node name="Transitions" type="CanvasLayer"]
+layer = 100
 script = ExtResource("1")
+
+[node name="Ink" type="ColorRect" parent="."]
+material = ExtResource("2")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Card" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"TransCard"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="End" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"TransEnd"
+text = "THE END"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -1,15 +1,16 @@
 class_name Crow
 extends BoardObject
-## A perched crow that flaps and flies off, ported from the old Crow. It sits still until the line
-## set by fly_at, then beats its wings and lifts away across the frame, fading out. Art is in design
+## A perched crow that flaps and flies off. The body is authored in the scene; this script animates
+## the wing and tail, then lifts the bird away across the frame and fades it out. Art is in design
 ## units, x centred on 0, with no scale premultiply.
 
 const FLY_DURATION := 4.0
 
-var _art: Node2D
-var _tail: Polygon2D
-var _wing: Polygon2D
-var _leg: Polygon2D
+@onready var _art: Node2D = $Art
+@onready var _tail: Polygon2D = $Art/Tail
+@onready var _wing: Polygon2D = $Art/Wing
+@onready var _leg: Polygon2D = $Art/Leg
+
 var _t := 0.0
 var _fly := 0.0
 var _fly_active := false
@@ -19,28 +20,10 @@ var _delay := 0.0
 
 func on_object_params(p: Dictionary) -> void:
 	super.on_object_params(p)
-	_fly_at = int(p["fly_at"]) if p.has("fly_at") else null
+	_fly_at = null
+	if p.has("fly_at"):
+		_fly_at = int(p["fly_at"])
 	_delay = float(p.get("delay", 0.0))
-
-
-func _ready() -> void:
-	_art = Node2D.new()
-	_art.scale = Vector2(-1.0, 1.0)
-	add_child(_art)
-	_build()
-
-
-func _build() -> void:
-	_art.add_child(_poly(_ellipse_pts(0.0, 0.0, 7.0, 4.0), Palette.INK))
-	_art.add_child(_poly(_oct_pts(-6.0, -3.0, 3.0), Palette.INK))
-	_art.add_child(_poly(_rect(-10.0, -3.0, 4.0, 1.4), Palette.INK))
-	_tail = _poly(PackedVector2Array(), Palette.INK)
-	_wing = _poly(PackedVector2Array(), Palette.INK)
-	_leg = _poly(_rect(1.0, 4.0, 1.4, 5.0), Palette.INK)
-	_art.add_child(_tail)
-	_art.add_child(_wing)
-	_art.add_child(_leg)
-	_shape(false, 0.5, 0.0)
 
 
 func on_line(idx: int) -> void:
@@ -78,33 +61,6 @@ func _shape(flying: bool, w: float, wob: float) -> void:
 	for i in range(1, wg2.size()):
 		wg.append(wg2[i])
 	_wing.polygon = wg
-
-
-func _poly(points: PackedVector2Array, col: Color) -> Polygon2D:
-	var p := Polygon2D.new()
-	p.polygon = points
-	p.color = col
-	return p
-
-
-func _rect(x: float, y: float, w: float, h: float) -> PackedVector2Array:
-	return PackedVector2Array([Vector2(x, y), Vector2(x + w, y), Vector2(x + w, y + h), Vector2(x, y + h)])
-
-
-func _oct_pts(cx: float, cy: float, r: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in 8:
-		var a := float(i) / 8.0 * TAU + PI / 8.0
-		pts.append(Vector2(cx + cos(a) * r, cy + sin(a) * r))
-	return pts
-
-
-func _ellipse_pts(cx: float, cy: float, rx: float, ry: float, seg: int = 20) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in seg:
-		var a := float(i) / float(seg) * TAU
-		pts.append(Vector2(cx + cos(a) * rx, cy + sin(a) * ry))
-	return pts
 
 
 func _quad(p0: Vector2, c: Vector2, p1: Vector2, steps: int = 10) -> PackedVector2Array:

@@ -1,0 +1,154 @@
+[gd_resource type="Theme" load_steps=9 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/Oswald.ttf" id="1_oswald"]
+[ext_resource type="FontFile" path="res://fonts/SpecialElite.ttf" id="2_elite"]
+
+[sub_resource type="StyleBoxFlat" id="menu_normal"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.92, 0.9, 0.84, 0.45)
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="menu_hover"]
+bg_color = Color(0.92, 0.9, 0.84, 0.06)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.882, 0, 0.063, 1)
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="nav_normal"]
+bg_color = Color(0.03, 0.03, 0.04, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.83, 0.78, 0.3)
+content_margin_left = 14.0
+content_margin_top = 14.0
+content_margin_right = 14.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="mute_normal"]
+bg_color = Color(0, 0, 0, 0.55)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.28)
+
+[sub_resource type="StyleBoxFlat" id="caption_panel"]
+bg_color = Color(0.96, 0.949, 0.91, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+content_margin_left = 28.0
+content_margin_top = 28.0
+content_margin_right = 28.0
+content_margin_bottom = 28.0
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 0
+shadow_offset = Vector2(7, 7)
+
+[sub_resource type="StyleBoxEmpty" id="empty"]
+
+[resource]
+RichTextLabel/colors/default_color = Color(0.067, 0.067, 0.067, 1)
+RichTextLabel/font_sizes/bold_font_size = 28
+RichTextLabel/font_sizes/normal_font_size = 28
+RichTextLabel/fonts/bold_font = ExtResource("2_elite")
+RichTextLabel/fonts/normal_font = ExtResource("2_elite")
+SceneTag/base_type = &"Label"
+SceneTag/colors/font_color = Color(0.847, 0.831, 0.784, 1)
+SceneTag/colors/font_shadow_color = Color(0, 0, 0, 1)
+SceneTag/constants/shadow_offset_x = 2
+SceneTag/constants/shadow_offset_y = 2
+SceneTag/font_sizes/font_size = 19
+SceneTag/fonts/font = ExtResource("2_elite")
+TapNote/base_type = &"Label"
+TapNote/colors/font_color = Color(0.486, 0.486, 0.486, 1)
+TapNote/font_sizes/font_size = 12
+TapNote/fonts/font = ExtResource("1_oswald")
+Title/base_type = &"Label"
+Title/font_sizes/font_size = 140
+Title/fonts/font = ExtResource("1_oswald")
+Heading/base_type = &"Label"
+Heading/colors/font_color = Color(0.92, 0.9, 0.84, 0.55)
+Heading/font_sizes/font_size = 17
+Heading/fonts/font = ExtResource("1_oswald")
+Subtitle/base_type = &"Label"
+Subtitle/colors/font_color = Color(0.925, 0.902, 0.839, 1)
+Subtitle/font_sizes/font_size = 26
+Subtitle/fonts/font = ExtResource("1_oswald")
+Blurb/base_type = &"Label"
+Blurb/colors/font_color = Color(0.92, 0.9, 0.84, 0.72)
+Blurb/font_sizes/font_size = 21
+Blurb/fonts/font = ExtResource("1_oswald")
+GateIcon/base_type = &"Label"
+GateIcon/colors/font_color = Color(0.882, 0, 0.063, 1)
+GateIcon/font_sizes/font_size = 96
+GateIcon/fonts/font = ExtResource("1_oswald")
+GateTitle/base_type = &"Label"
+GateTitle/colors/font_color = Color(0.925, 0.902, 0.839, 1)
+GateTitle/font_sizes/font_size = 30
+GateTitle/fonts/font = ExtResource("1_oswald")
+GateSub/base_type = &"Label"
+GateSub/colors/font_color = Color(0.92, 0.9, 0.84, 0.6)
+GateSub/font_sizes/font_size = 18
+GateSub/fonts/font = ExtResource("1_oswald")
+TransCard/base_type = &"Label"
+TransCard/colors/font_color = Color(0.961, 0.949, 0.91, 1)
+TransCard/font_sizes/font_size = 50
+TransCard/fonts/font = ExtResource("1_oswald")
+TransEnd/base_type = &"Label"
+TransEnd/colors/font_color = Color(0.925, 0.902, 0.839, 1)
+TransEnd/font_sizes/font_size = 61
+TransEnd/fonts/font = ExtResource("1_oswald")
+ChoiceButton/base_type = &"Button"
+ChoiceButton/colors/font_color = Color(0.949, 0.933, 0.886, 1)
+ChoiceButton/colors/font_hover_color = Color(1, 1, 1, 1)
+ChoiceButton/font_sizes/font_size = 24
+ChoiceButton/fonts/font = ExtResource("1_oswald")
+ChoiceButton/styles/focus = SubResource("empty")
+ChoiceButton/styles/hover = SubResource("menu_hover")
+ChoiceButton/styles/normal = SubResource("menu_normal")
+ChoiceButton/styles/pressed = SubResource("menu_hover")
+ChoiceButtonSelected/base_type = &"Button"
+ChoiceButtonSelected/colors/font_color = Color(1, 1, 1, 1)
+ChoiceButtonSelected/colors/font_hover_color = Color(1, 1, 1, 1)
+ChoiceButtonSelected/font_sizes/font_size = 24
+ChoiceButtonSelected/fonts/font = ExtResource("1_oswald")
+ChoiceButtonSelected/styles/focus = SubResource("empty")
+ChoiceButtonSelected/styles/hover = SubResource("menu_hover")
+ChoiceButtonSelected/styles/normal = SubResource("menu_hover")
+ChoiceButtonSelected/styles/pressed = SubResource("menu_hover")
+NavButton/base_type = &"Button"
+NavButton/colors/font_color = Color(0.788, 0.769, 0.714, 1)
+NavButton/font_sizes/font_size = 16
+NavButton/fonts/font = ExtResource("1_oswald")
+NavButton/styles/focus = SubResource("empty")
+NavButton/styles/hover = SubResource("nav_normal")
+NavButton/styles/normal = SubResource("nav_normal")
+NavButton/styles/pressed = SubResource("nav_normal")
+MuteButton/base_type = &"Button"
+MuteButton/colors/font_color = Color(0.847, 0.831, 0.784, 1)
+MuteButton/font_sizes/font_size = 24
+MuteButton/fonts/font = ExtResource("1_oswald")
+MuteButton/styles/focus = SubResource("empty")
+MuteButton/styles/hover = SubResource("mute_normal")
+MuteButton/styles/normal = SubResource("mute_normal")
+MuteButton/styles/pressed = SubResource("mute_normal")
+CaptionPanel/base_type = &"PanelContainer"
+CaptionPanel/styles/panel = SubResource("caption_panel")

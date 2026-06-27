@@ -14,6 +14,7 @@ func _ready() -> void:
 	_main = load("res://scenes/core/Main.tscn").instantiate()
 	add_child(_main)
 	await get_tree().create_timer(0.4).timeout
+	await _shot("00_start_screen")
 
 	var lib: StoryLibrary = load("res://stories/library.tres")
 	var s0: Story = lib.stories[0]
