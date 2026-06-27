@@ -4,16 +4,17 @@ Noir is a noir crime motion comic, a storytelling board where rain soaked storie
 staged and played one beat at a time. You tap through the night, the captions fall like
 narration, and the only colour is the colour that bleeds.
 
-It is built natively in [Godot 4.7](https://godotengine.org). Stories are pure data and the
-look is shared, so telling a new tale is writing data, not engine code.
+It is built natively in [Godot 4.7](https://godotengine.org). Stories are data and the look
+is shared, so telling a new tale is writing a resource, not engine code.
 
 ## The idea
 
 This is a board for telling noir stories, not a general purpose engine. Every tale is a
-plain dictionary: a title, some music, and a list of acts. Each act names a backdrop, the
-lights, the cast, and the lines that play over them. The board reads that data and stages
-it with real Godot 2D: a global wash, lights and shadows, rain and fog, neon that blooms,
-and the colour red where the story bleeds.
+Story resource: a title, some music, and a list of acts. Each act names a backdrop, the
+lights, the cast, and the lines that play over them. The board reads that resource and
+stages it as a real Godot scene tree: object scenes built from Polygon2D, Line2D and
+Sprite2D, lit by native 2D lights over a global wash, with bloom, rain and the colour red
+where the story bleeds.
 
 Behaviour is data too. A character walks, a sign ignites, a gun fires, blood crawls to the
 drain, all expressed as parameters and per line effects rather than new code.
@@ -37,44 +38,41 @@ First open reimports the assets into the local `.godot` folder.
 
 ## How a tale is shaped
 
-A story is a dictionary (see `data/HallucinationStory.gd` for a worked example):
+A story is a `Story` resource (`stories/hallucination.tres` is a worked example), with a
+title, music, and an array of `Act` resources. Each act carries the look and audio knobs, a
+backdrop, the lights and cast (each a `Placement` that points at an object scene with its
+params), and an array of `Line` resources. A line's `text` accepts simple emphasis, and the
+words wrapped in `<b>..</b>` print in blood red. A line's `fx` fires events for that beat
+(`muzzle`, `blood`, `lightning`, `hammer`, `lighter`). A cast member can be revealed or
+hidden by an event with `on_flag` and `hide_on_flag`.
 
-```gdscript
-{
-    "title": ..., "subtitle": ..., "blurb": ...,
-    "music": "piano_noir", "music_vol": 0.62,
-    "scenes": [
-        {
-            "title": "THE STREET", "ground": 0.8, "ambience": "street",
-            "backdrop": { "type": "skyline", "seed": 1977, "layers": [ ... ] },
-            "lights":  [ { "type": "neon", "x": 0.10, "label": "BAR", ... } ],
-            "cast":    [ { "type": "trenchMan", "x": 0.34, "light_at": 3 }, ... ],
-            "script":  [ { "text": "The night is wet ...", "fx": ["lighter"] }, ... ],
-        },
-    ],
-}
-```
+To add a tale, author a `Story` resource (in the editor inspector, or by extending the
+`tools/build_stories.gd` generator), then add it to `stories/library.tres`, the list the
+start screen reads. No board changes needed.
 
-`text` accepts simple emphasis, and the words wrapped in `<b>..</b>` print in blood red. A
-line's `fx` fires events for that beat (`muzzle`, `blood`, `lightning`, `hammer`, `lighter`).
-A cast member can be revealed or hidden by an event with `on_flag` and `hide_on_flag`.
-
-To add a tale, write a data class under `data/`, then list it in `data/StoryLibrary.gd`. No
-board changes needed.
+To add a new object or backdrop, make a scene under `scenes/actors`, `scenes/props`,
+`scenes/lights`, `scenes/effects` or `scenes/backdrops` whose root extends `BoardObject`
+(or `BoardLight` / `BoardBackdrop`), then place it in a tale by pointing a `Placement` at it.
 
 ## Layout
 
 ```
-data/                   the tales (pure data) + the story picker list
+stories/                the tales (Story .tres) + the picker library.tres
+src/resources/          the data types: Story, Act, Line, Placement, StoryLibrary
+src/util/               LightTex (light textures), BackdropBaker (skyline baking)
 scenes/
-  core/Main.*           the view controller: world, camera, post, flow
-  panels/NoirPanel.gd   the board: world layer, additive light buffer, weather
-  engine/               the staging model: frame facade, lighting, scene runtime, registry
-  library/              the cast, props, lights, backdrops and effects (the art)
+  core/Main.*           the view controller: wash, bloom, camera, post, UI, flow
+  board/                Board (the act host) + BoardObject (the placed object base)
+  backdrops/            skyline, alley, rooftop, room (BoardBackdrop scenes)
+  lights/               lamp, neon, bulb (BoardLight scenes driving PointLight2D)
+  actors/               the cast and the animals
+  props/                street and casino props
+  effects/              steam, searchlight, newspaper, the blood set, rain, lightning
   ui/                   start screen, captions and act picker, rotation gate
-  fx/                   shared texture helpers
-autoload/               Palette, SceneDirector, AudioDirector, Transitions
+  transitions/          ink wipe, act card, end card
+autoload/               Palette, GameState, AudioDirector
 shaders/                grain, vignette, ink wipe
+tools/                  build_stories (the .tres generator), SmokeTest
 audio/ fonts/           sound and type
 ```
 
