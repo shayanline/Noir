@@ -35,7 +35,7 @@ var _tap: Label
 var _review_btn: Button
 var _navdrop: VBoxContainer
 var _end_box: CenterContainer
-var _end_row: HFlowContainer
+var _end_row: HBoxContainer
 
 var _menu: Control
 var _menu_views := {}
@@ -205,10 +205,10 @@ func _build_actsel() -> void:
 	_end_box.mouse_filter = Control.MOUSE_FILTER_PASS
 	_end_box.visible = false
 	add_child(_end_box)
-	_end_row = HFlowContainer.new()
-	_end_row.add_theme_constant_override("h_separation", 16)
-	_end_row.add_theme_constant_override("v_separation", 12)
-	_end_row.alignment = FlowContainer.ALIGNMENT_CENTER
+	# a centered horizontal row of act chips at THE END (like Inkfall's ended scene picker)
+	_end_row = HBoxContainer.new()
+	_end_row.add_theme_constant_override("separation", 16)
+	_end_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_end_box.add_child(_end_row)
 
 

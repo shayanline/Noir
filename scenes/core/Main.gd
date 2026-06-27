@@ -231,13 +231,17 @@ func _set_ended_grade(on: bool) -> void:
 		return
 	var d0 = _post_mat.get_shader_parameter("desaturate")
 	var g0 = _post_mat.get_shader_parameter("grain_amount")
+	var v0 = _post_mat.get_shader_parameter("vignette")
 	if typeof(d0) != TYPE_FLOAT:
 		d0 = 0.82
 	if typeof(g0) != TYPE_FLOAT:
 		g0 = 0.05
+	if typeof(v0) != TYPE_FLOAT:
+		v0 = 0.7
 	var tw := create_tween().set_parallel(true)
 	tw.tween_method(func(v: float): _post_mat.set_shader_parameter("desaturate", v), d0, 1.0 if on else 0.82, 0.8)
 	tw.tween_method(func(v: float): _post_mat.set_shader_parameter("grain_amount", v), g0, 0.15 if on else 0.05, 0.8)
+	tw.tween_method(func(v: float): _post_mat.set_shader_parameter("vignette", v), v0, 0.86 if on else 0.7, 0.8)
 
 
 func _on_nav_selected(index: int) -> void:
