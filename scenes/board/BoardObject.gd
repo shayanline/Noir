@@ -8,6 +8,8 @@ extends Node2D
 
 @export var nx := 0.5            ## horizontal placement, 0..1 of the board width
 @export var ny_units := 0.0      ## vertical offset from the ground line, in design units
+@export var anchor := "ground"   ## "ground" sits on the ground line, "screen" uses abs_y
+@export var abs_y := 0.5         ## vertical placement, 0..1 of board height (screen anchor)
 @export var par := 0.5           ## parallax factor for the look offset
 @export var obj_scale := 1.0     ## extra scale on top of the board unit
 @export var depth := 0           ## draw order within the layer (low draws behind)
@@ -57,8 +59,14 @@ func place() -> void:
 	z_index = depth
 	var s := board.unit * obj_scale
 	scale = Vector2(-s if flip else s, s)
-	position = Vector2(_current_x(), board.ground_y + ny_units * board.unit)
+	position = Vector2(_current_x(), _current_y())
 	_refresh_visibility()
+
+
+func _current_y() -> float:
+	if anchor == "screen":
+		return abs_y * board.size.y
+	return board.ground_y + ny_units * board.unit
 
 
 func _current_x() -> float:

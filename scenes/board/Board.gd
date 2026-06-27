@@ -90,8 +90,8 @@ func _spawn(p: Placement, base_z: int) -> BoardObject:
 	var obj: BoardObject = p.scene.instantiate()
 	obj.setup(p.params, self)
 	add_child(obj)
-	obj.z_index += base_z
 	obj.place()
+	obj.z_index = base_z + obj.depth
 	_objects.append(obj)
 	return obj
 

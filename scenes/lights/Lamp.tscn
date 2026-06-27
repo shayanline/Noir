@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/lights/Lamp.gd" id="1"]
+
+[node name="Lamp" type="Node2D"]
+script = ExtResource("1")
+color = Color(1, 0.980392, 0.882353, 1)
+
+[node name="Light" type="PointLight2D" parent="."]
+position = Vector2(26, -150)
+
+[node name="Pole" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-2, 0, 2, 0, 2, -150, -2, -150)
+color = Color(0.0078, 0.0078, 0.0118, 1)
+
+[node name="Arm" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, -150, 26, -154, 26, -147)
+color = Color(0.0078, 0.0078, 0.0118, 1)
+
+[node name="Head" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(19, -158, 33, -158, 30, -150, 22, -150)
+color = Color(0.0078, 0.0078, 0.0118, 1)
+
+[node name="Glass" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(30, -148, 28.83, -145.17, 26, -144, 23.17, -145.17, 22, -148, 23.17, -150.83, 26, -152, 28.83, -150.83)
+color = Color(1, 0.98, 0.9, 1)

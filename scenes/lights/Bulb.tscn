@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/lights/Bulb.gd" id="1"]
+
+[node name="Bulb" type="Node2D"]
+script = ExtResource("1")
+color = Color(1, 0.956863, 0.823529, 1)
+
+[node name="Light" type="PointLight2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="Wire" type="Line2D" parent="."]
+points = PackedVector2Array(0, -95, 0, 0)
+width = 1.0
+default_color = Color(0.0078, 0.0078, 0.0118, 1)
+
+[node name="Glass" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(3.5, 0, 2.47, 2.47, 0, 3.5, -2.47, 2.47, -3.5, 0, -2.47, -2.47, 0, -3.5, 2.47, -2.47)
+color = Color(1, 0.964, 0.86, 1)
