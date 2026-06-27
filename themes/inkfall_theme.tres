@@ -178,8 +178,8 @@ shadow_offset = Vector2(4, 4)
 
 [resource]
 RichTextLabel/colors/default_color = Color(0.067, 0.067, 0.067, 1)
-RichTextLabel/font_sizes/bold_font_size = 29
-RichTextLabel/font_sizes/normal_font_size = 29
+RichTextLabel/font_sizes/bold_font_size = 22
+RichTextLabel/font_sizes/normal_font_size = 22
 RichTextLabel/fonts/bold_font = ExtResource("2_elite")
 RichTextLabel/fonts/normal_font = ExtResource("2_elite")
 Title/base_type = &"Label"

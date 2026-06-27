@@ -482,6 +482,17 @@ func _set_cap_reveal(v: float) -> void:
 	_cap_mat.set_shader_parameter("reveal", v)
 
 
+func _process(_delta: float) -> void:
+	# feed the panel's live bounds (UV within the render target) to the reveal shader, so the torn
+	# sweep crosses the visible caption over its full duration rather than racing across empty margins
+	if _cap_shown and _caption and _cap_mat:
+		var vp := Vector2(_CAP_VP)
+		var p := _caption.position
+		var s := _caption.size
+		_cap_mat.set_shader_parameter("cap_rect",
+			Vector4(p.x / vp.x, p.y / vp.y, (p.x + s.x) / vp.x, (p.y + s.y) / vp.y))
+
+
 func hide_caption() -> void:
 	if _cap_tween:
 		_cap_tween.kill()
