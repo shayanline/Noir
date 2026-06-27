@@ -80,7 +80,11 @@ func _build_caption() -> void:
 	# the caption (paper panel plus text) renders into a SubViewport, so the torn reveal shader can
 	# mask the whole thing as one image. The panel hugs its text, anchored near the viewport's bottom.
 	_cap_vp = SubViewport.new()
-	_cap_vp.size = _CAP_VP
+	# render at 2x and present at the logical size, so the caption text stays crisp when the canvas
+	# is scaled up (the layout still happens at _CAP_VP via the size override)
+	_cap_vp.size = _CAP_VP * 2
+	_cap_vp.size_2d_override = _CAP_VP
+	_cap_vp.size_2d_override_stretch = true
 	_cap_vp.transparent_bg = true
 	_cap_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_cap_vp.gui_disable_input = true
@@ -111,6 +115,7 @@ func _build_caption() -> void:
 	_cap_tex = TextureRect.new()
 	_cap_tex.texture = _cap_vp.get_texture()
 	_cap_tex.material = _cap_mat
+	_cap_tex.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_cap_tex.custom_minimum_size = Vector2(_CAP_VP)
 	_cap_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cap_tex.anchor_left = 0.5
