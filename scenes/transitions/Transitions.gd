@@ -4,19 +4,19 @@ extends CanvasLayer
 ## caller orchestrates a scene change as: await close(); swap board; await show_card(title);
 ## await open().
 
-@onready var _ink: ColorRect = $Ink
+@onready var _ink: InkWipe = $Ink
 @onready var _card: Label = $Card
 @onready var _end: Label = $End
 
 
 func _set_progress(v: float) -> void:
-	_ink.material.set_shader_parameter("progress", v)
+	_ink.progress = v
 
 
 func close(dur := -1.0) -> void:
 	if dur < 0.0:
 		dur = Palette.TRANS_IN
-	var from: float = _ink.material.get_shader_parameter("progress")
+	var from: float = _ink.progress
 	var tw := create_tween()
 	tw.tween_method(_set_progress, from, 1.0, dur)
 	await tw.finished

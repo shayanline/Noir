@@ -68,9 +68,9 @@ scenes/
   effects/            steam and searchlight (particles and 2D lights), newspaper, the blood set
                       (bodyOnGround, bloodSplat, bloodDrain), RainField, Lightning
   ui/                 StartScreen (title and tale picker), Hud (captions, scene tag, nav), RotationGate
-  transitions/        Transitions (ink wipe, act title card, the end card)
+  transitions/        Transitions (the act flow) + InkWipe (the drawn panel wipe), act card, end card
 tools/                build_stories.gd (regenerates the .tres tales), SmokeTest.*
-shaders/              post (grain, vignette), ink_wipe (the transition)
+shaders/              post (grain, vignette)
 audio/ fonts/         sound and type
 ```
 
