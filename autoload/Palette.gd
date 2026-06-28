@@ -40,6 +40,7 @@ const PARALLAX_LERP := 0.08
 
 const TRANS_IN := 0.5        # ink wipe close duration (s)
 const TRANS_OUT := 0.6       # ink wipe open duration (s)
+const CARD_FADE := 0.4       # title card fade in and fade out duration (s), same both ways
 const CARD_HOLD := 2.0       # act-card dwell (s)
 const OPEN_CARD_HOLD := 2.8  # the first act card (right after the story title) lingers a touch longer
 const TITLE_HOLD := 3.4      # opening story-title card dwell (s)

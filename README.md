@@ -79,9 +79,9 @@ scenes/
   props/                street and casino props
   effects/              steam, searchlight, newspaper, the blood set, rain, lightning
   ui/                   start screen, captions and act picker, rotation gate
-  transitions/          the panel ink wipe (drawn in InkWipe), act card, end card
+  transitions/          Transitions (ink wipe, act card, end card)
 autoload/               Palette, GameState (the model and signal source), AudioDirector, Transitions
-shaders/                grain, vignette
+shaders/                post (grain, vignette), ink_wipe (the transition)
 tools/                  build_stories (the .tres generator), SmokeTest
 audio/ fonts/           sound and type
 ```

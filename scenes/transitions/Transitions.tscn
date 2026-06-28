@@ -1,13 +1,23 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/transitions/Transitions.gd" id="1"]
-[ext_resource type="Script" path="res://scenes/transitions/InkWipe.gd" id="2"]
+[ext_resource type="Shader" path="res://shaders/ink_wipe.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="ink_mat"]
+shader = ExtResource("2")
+shader_parameter/progress = 0.0
+shader_parameter/ink_color = Color(0.039, 0.031, 0.024, 1)
+shader_parameter/softness = 0.035
+shader_parameter/bleed = 0.5
+shader_parameter/stagger = 0.06
+shader_parameter/direction = 1.0
 
 [node name="Transitions" type="CanvasLayer"]
 layer = 100
 script = ExtResource("1")
 
-[node name="Ink" type="Control" parent="."]
+[node name="Ink" type="ColorRect" parent="."]
+material = SubResource("ink_mat")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -15,7 +25,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("2")
+color = Color(0, 0, 0, 0)
 
 [node name="Card" type="Label" parent="."]
 modulate = Color(1, 1, 1, 0)
