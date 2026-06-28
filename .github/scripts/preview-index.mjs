@@ -18,7 +18,10 @@ const save = (p, d) => writeFileSync(p, JSON.stringify(d, null, 2) + '\n');
 
 // master first, then alphabetical.
 const order = (a, b) =>
-  a.branch === 'master' ? -1 : b.branch === 'master' ? 1 : a.branch.localeCompare(b.branch);
+  a.branch === b.branch ? 0
+    : a.branch === 'master' ? -1
+    : b.branch === 'master' ? 1
+    : a.branch.localeCompare(b.branch);
 
 const [cmd, ...rest] = process.argv.slice(2);
 
