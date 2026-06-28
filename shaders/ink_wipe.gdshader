@@ -115,10 +115,14 @@ void fragment() {
 		// three bars: the outer two extend past the screen edges (-0.1 and 1.1) so the smoothstep
 		// mask is fully opaque at the actual boundary (y = 0 and y = 1). Only interior overlaps fade.
 
+		// 1.25x overshoot: the bars visually complete at progress ~0.8, matching the legacy feel
+		// where the wipe reaches full coverage early and the last 20% is dead time (already solid).
+		float op = min(progress * 1.25, 1.0);
+
 		// stagger: bar 0 runs slightly ahead, bar 2 slightly behind
-		float p0 = clamp(progress + stagger, 0.0, 1.0);
-		float p1 = progress;
-		float p2 = clamp(progress - stagger, 0.0, 1.0);
+		float p0 = clamp(op + stagger, 0.0, 1.0);
+		float p1 = op;
+		float p2 = clamp(op - stagger, 0.0, 1.0);
 
 		// bar 0: extends above screen so top edge is always fully covered
 		float m0 = bar_mask(uv.y, -0.1, 0.42);

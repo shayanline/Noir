@@ -507,7 +507,7 @@ func show_caption(text: String) -> void:
 	_cap_tween = create_tween()
 	if _cap_shown:
 		# wipe the current line out (with its own torn edge), then cut the new line in
-		_cap_tween.tween_method(_set_cap_reveal, 1.0, 0.0, _CAP_OUT).set_ease(Tween.EASE_IN)
+		_cap_tween.tween_method(_set_cap_reveal, 1.0, 0.0, _CAP_OUT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		_cap_tween.tween_callback(func(): _apply_caption(bb, variant, seed))
 	else:
 		_apply_caption(bb, variant, seed)
