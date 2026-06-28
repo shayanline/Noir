@@ -5,10 +5,11 @@ extends CanvasLayer
 ## await open().
 
 @onready var _ink: ColorRect = $Ink
-@onready var _card: Label = $Card
+@onready var _cards: Array[Label] = [$Card, $CardB]
 @onready var _end: Label = $End
 
 var _progress := 0.0
+var _card_slot := 0
 
 
 func _set_progress(v: float) -> void:
@@ -40,18 +41,33 @@ func open(dur := -1.0) -> void:
 	await tw.finished
 
 
-func show_card(title: String, hold := -1.0) -> void:
+## show a title card over the ink. Back to back calls crossfade: the old title fades out on one
+## label while the new one fades in on the other, so there is never a frame of pure black between
+## them. If `last` is true (the default) the method awaits the full fade out before returning. Set
+## `last` to false when another card follows immediately, so the fade out runs in the background
+## and the next show_card can crossfade into it.
+func show_card(title: String, hold := -1.0, last := true) -> void:
 	if hold < 0.0:
 		hold = Palette.CARD_HOLD
-	# set the text only once the label is fully transparent, so a back to back call never flashes
-	# the new title over the tail of the old fade out
-	_card.modulate.a = 0.0
-	_card.text = title
+	var prev := _cards[_card_slot]
+	_card_slot = 1 - _card_slot
+	var cur := _cards[_card_slot]
+	cur.text = title
+	cur.modulate.a = 0.0
+	# crossfade: fade out the previous card (fire and forget) while fading in the new one
+	if prev.modulate.a > 0.0:
+		create_tween().tween_property(prev, "modulate:a", 0.0, Palette.CARD_FADE)
 	var tw := create_tween()
-	tw.tween_property(_card, "modulate:a", 1.0, Palette.CARD_FADE)
+	tw.tween_property(cur, "modulate:a", 1.0, Palette.CARD_FADE)
 	tw.tween_interval(hold)
-	tw.tween_property(_card, "modulate:a", 0.0, Palette.CARD_FADE)
-	await tw.finished
+	if last:
+		tw.tween_property(cur, "modulate:a", 0.0, Palette.CARD_FADE)
+		await tw.finished
+	else:
+		# return after the hold so the caller can start the next card while this one is still visible
+		await tw.finished
+		# kick off the fade out in the background (the next show_card will crossfade into it)
+		create_tween().tween_property(cur, "modulate:a", 0.0, Palette.CARD_FADE)
 
 
 func show_end() -> void:
@@ -67,5 +83,6 @@ func hide_end() -> void:
 ## clear every overlay at once (used when leaving a story mid play), so the screen is clean.
 func clear() -> void:
 	_set_progress(0.0)
-	_card.modulate.a = 0.0
+	for c in _cards:
+		c.modulate.a = 0.0
 	_end.modulate.a = 0.0

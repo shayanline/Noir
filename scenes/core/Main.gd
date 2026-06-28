@@ -72,10 +72,10 @@ func _build_crossfade() -> void:
 
 func _on_enter(story: Story) -> void:
 	GameState.load_story(story)
-	_start.visible = false
 	_gate.begin_story()
 	if _gate.is_blocked():
 		await _gate.unblocked
+	_start.visible = false
 	_hud.build_nav(GameState.act_titles())
 	await _open_story(story)
 	_hud.begin_play()
@@ -87,7 +87,7 @@ func _on_enter(story: Story) -> void:
 func _open_story(story: Story) -> void:
 	Transitions.cover()
 	var title := story.subtitle if story.subtitle != "" else story.title
-	await Transitions.show_card(title, Palette.TITLE_HOLD)
+	await Transitions.show_card(title, Palette.TITLE_HOLD, false)
 	AudioDirector.start()
 	await _enter_act(0, true)
 
@@ -99,7 +99,9 @@ func _enter_act(index: int, first: bool) -> void:
 	_swap_board(act)
 	if first:
 		# the screen is already black from the story-title card, so show the first act card here too.
-		# the score and the swoosh come in with the act title, not the story title.
+		# a short beat of darkness between the story title fading out and the act title appearing,
+		# so the two cards do not run into each other.
+		await get_tree().create_timer(0.5).timeout
 		var story := GameState.story
 		if story.music != "":
 			AudioDirector.play_music(story.music, story.music_vol)
