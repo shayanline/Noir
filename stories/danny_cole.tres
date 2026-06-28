@@ -782,5 +782,7 @@ script = ExtResource("30_bkmfu")
 title = "INKFALL"
 subtitle = "THE LAST DEAL OF DANNY COLE"
 blurb = "A small man with a big debt goes looking for easy money in the underground casinos of Basin City. The house always wins. Tap through his last bad night."
+picker_name = "STORY 1"
+picker_tagline = "THE LAST DEAL OF DANNY COLE"
 music = "sad_jazz"
 acts = Array[ExtResource("1_xy44b")]([SubResource("Resource_dh3eh"), SubResource("Resource_b45nh"), SubResource("Resource_j8mxw"), SubResource("Resource_k8ncm"), SubResource("Resource_yfe1l")])

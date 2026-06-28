@@ -32,10 +32,10 @@ content_margin_top = 22.0
 content_margin_right = 64.0
 content_margin_bottom = 22.0
 bg_color = Color(0.882, 0, 0.063, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(0.882, 0, 0.063, 1)
 
 [sub_resource type="StyleBoxFlat" id="enter_normal"]
@@ -44,10 +44,10 @@ content_margin_top = 22.0
 content_margin_right = 64.0
 content_margin_bottom = 22.0
 bg_color = Color(0, 0, 0, 0)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(1, 1, 1, 1)
 
 [sub_resource type="FontVariation" id="font_gate_btn"]
@@ -213,10 +213,10 @@ content_margin_top = 20.0
 content_margin_right = 32.0
 content_margin_bottom = 20.0
 bg_color = Color(0, 0, 0, 0)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(0.925, 0.902, 0.839, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="story_cur"]
@@ -225,10 +225,10 @@ content_margin_top = 20.0
 content_margin_right = 32.0
 content_margin_bottom = 20.0
 bg_color = Color(0.925, 0.902, 0.839, 0.04)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(0.882, 0, 0.063, 1)
 
 [sub_resource type="StyleBoxFlat" id="story_hover"]
@@ -237,10 +237,10 @@ content_margin_top = 20.0
 content_margin_right = 32.0
 content_margin_bottom = 20.0
 bg_color = Color(0.925, 0.902, 0.839, 0.06)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 border_color = Color(1, 1, 1, 1)
 
 [sub_resource type="FontVariation" id="font_storyname"]

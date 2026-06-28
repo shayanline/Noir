@@ -43,6 +43,7 @@ var fs_label := 14    ## headings ("CHOOSE YOUR TALE"), scene tag
 var fs_hud := 13      ## HUD chip text, REVIEW ACT
 var fs_icon := 18     ## icon buttons (the fullscreen, poster, menu chips)
 var fs_note := 11     ## tap note, tiny hints
+var fs_tagline := 15  ## story card tagline. Legacy: clamp(12, 2vmin, 15).
 
 ## HUD cell size (touch target for chips). Legacy: clamp(34, 6vmin, 52).
 var hud_cell := 52
@@ -59,6 +60,10 @@ var card_min_w := 300.0
 var enter_pad_h := 64.0  ## horizontal
 var enter_pad_v := 22.0  ## vertical
 
+## Story card padding. Legacy: clamp(14, 2.6vmin, 20) vertical, clamp(20, 4vmin, 32) horizontal.
+var card_pad_h := 32.0
+var card_pad_v := 20.0
+
 ## Gate button padding.
 var gate_pad_h := 30.0
 var gate_pad_v := 18.0
@@ -68,6 +73,12 @@ var spacer := 22.0
 
 ## VBox separation on start screen.
 var vbox_sep := 14
+
+## Story picker gap (between cards). Legacy: clamp(12, 2vmin, 18).
+var tales_gap := 18
+
+## Separation between the name and tagline inside a story card. Legacy: clamp(6, 1.2vmin, 10).
+var card_sep := 10
 
 ## Caption min width.
 var caption_min_w := 560.0
@@ -119,6 +130,7 @@ func _recompute() -> void:
 	fs_hud = _clamp_i(10, vmin * 0.02, 13)
 	fs_icon = _clamp_i(14, vmin * 0.03, 18)
 	fs_note = _clamp_i(8, vmin * 0.016, 11)
+	fs_tagline = _clamp_i(12, vmin * 0.02, 15)
 
 	hud_cell = _clamp_i(34, vmin * 0.06, 52)
 
@@ -131,10 +143,14 @@ func _recompute() -> void:
 	card_min_w = clampf(cw * 0.16, 200, 340)
 	enter_pad_h = clampf(vmin * 0.06, 36, 64)
 	enter_pad_v = clampf(vmin * 0.022, 14, 22)
+	card_pad_h = clampf(vmin * 0.04, 20, 32)
+	card_pad_v = clampf(vmin * 0.026, 14, 20)
 	gate_pad_h = clampf(vmin * 0.03, 16, 30)
 	gate_pad_v = clampf(vmin * 0.018, 12, 18)
 	spacer = clampf(vmin * 0.022, 10, 30)
 	vbox_sep = _clamp_i(8, vmin * 0.014, 18)
+	tales_gap = _clamp_i(12, vmin * 0.02, 18)
+	card_sep = _clamp_i(6, vmin * 0.012, 10)
 	caption_min_w = clampf(cw * 0.30, 320, 600)
 	caption_bottom = clampf(safe_bottom + vmin * 0.04, 24, 60)
 	tap_bottom = maxf(safe_bottom + 6, 10)

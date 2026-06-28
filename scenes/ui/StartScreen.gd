@@ -66,7 +66,7 @@ func _make_card(s: Story, idx: int) -> PanelContainer:
 
 	var name_lbl := Label.new()
 	name_lbl.theme_type_variation = &"StoryName"
-	name_lbl.text = s.subtitle
+	name_lbl.text = s.picker_name if s.picker_name else s.subtitle
 	name_lbl.custom_minimum_size = Vector2(300, 0)
 	name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -74,7 +74,7 @@ func _make_card(s: Story, idx: int) -> PanelContainer:
 
 	var tag_lbl := Label.new()
 	tag_lbl.theme_type_variation = &"StoryTagline"
-	tag_lbl.text = _first_sentence(s.blurb)
+	tag_lbl.text = s.picker_tagline if s.picker_tagline else s.subtitle
 	tag_lbl.custom_minimum_size = Vector2(300, 0)
 	tag_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tag_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -82,17 +82,12 @@ func _make_card(s: Story, idx: int) -> PanelContainer:
 
 	card.set_meta(&"name_lbl", name_lbl)
 	card.set_meta(&"tag_lbl", tag_lbl)
+	card.set_meta(&"inner_box", box)
 	card.gui_input.connect(func(e: InputEvent): _on_card_input(e, idx))
 	card.mouse_entered.connect(func(): _restyle(idx, true))
 	card.mouse_exited.connect(func(): _restyle(idx, false))
 	_cards.append(card)
 	return card
-
-
-## the tale's first sentence makes a short tagline under its name on the picker card.
-func _first_sentence(blurb: String) -> String:
-	var dot := blurb.find(". ")
-	return blurb.substr(0, dot + 1).strip_edges() if dot != -1 else blurb.strip_edges()
 
 
 func _on_card_input(e: InputEvent, idx: int) -> void:
@@ -137,6 +132,7 @@ func _rescale() -> void:
 	_heading.add_theme_font_size_override("font_size", UIScale.fs_label)
 	_enter.add_theme_font_size_override("font_size", UIScale.fs_sub)
 	_vbox.add_theme_constant_override("separation", UIScale.vbox_sep)
+	_tales.add_theme_constant_override("separation", UIScale.tales_gap)
 	_spacer1.custom_minimum_size.y = UIScale.spacer
 	_spacer2.custom_minimum_size.y = UIScale.spacer
 	# enter button padding
@@ -155,5 +151,16 @@ func _rescale() -> void:
 		var tag_lbl: Label = card.get_meta(&"tag_lbl")
 		name_lbl.add_theme_font_size_override("font_size", UIScale.fs_sub)
 		name_lbl.custom_minimum_size.x = UIScale.card_min_w
-		tag_lbl.add_theme_font_size_override("font_size", UIScale.fs_label)
+		tag_lbl.add_theme_font_size_override("font_size", UIScale.fs_tagline)
 		tag_lbl.custom_minimum_size.x = UIScale.card_min_w
+		var inner_box: VBoxContainer = card.get_meta(&"inner_box")
+		inner_box.add_theme_constant_override("separation", UIScale.card_sep)
+		# scale the card padding to match the legacy clamp
+		var sb: StyleBox = card.get_theme_stylebox("panel")
+		if sb is StyleBoxFlat:
+			var dup := sb.duplicate() as StyleBoxFlat
+			dup.content_margin_left = UIScale.card_pad_h
+			dup.content_margin_right = UIScale.card_pad_h
+			dup.content_margin_top = UIScale.card_pad_v
+			dup.content_margin_bottom = UIScale.card_pad_v
+			card.add_theme_stylebox_override("panel", dup)

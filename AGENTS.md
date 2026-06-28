@@ -32,7 +32,7 @@ stories/               the tales as resources
   library.tres           the StoryLibrary the start screen picker reads
 src/
   resources/             the data types (Resource subclasses)
-    Story.gd               title, subtitle, blurb, music, acts
+    Story.gd               title, subtitle, blurb, picker_name, picker_tagline, music, acts
     Act.gd                 look and audio knobs, backdrop, lights, cast, lines
     Line.gd                one beat: text plus fx
     Placement.gd           a scene plus its params (a backdrop, light or cast entry)
@@ -116,7 +116,10 @@ object enters its first frame:
 - A light scene is a `BoardLight` containing a `PointLight2D` child, which the base colours, energises
   and flickers from the params.
 
-A story is a `Story` resource: `title`, `subtitle`, `blurb`, `music`, `music_vol`, and `acts`. Each
+A story is a `Story` resource: `title`, `subtitle`, `blurb`, `picker_name`, `picker_tagline`, `music`,
+`music_vol`, and `acts`. `picker_name` and `picker_tagline` are the short labels on the start screen
+card (e.g. "STORY 0" and "A HALLUCINATION"), while `title` and `subtitle` are the full title card
+copy (e.g. "INKFALL" and "A HALLUCINATION OF SIN CITY"). Each
 `Act` has the look knobs (`ground`, `key_light`, `moon`, `indoor`, `blood_rain`), the audio knobs, a
 `backdrop` and arrays of `lights` and `cast` (each a `Placement` with a `scene` and a `params`
 dictionary), and an array of `lines`. A `Line` has `text` (simple emphasis, `<b>..</b>` prints in

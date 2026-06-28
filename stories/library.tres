@@ -477,6 +477,8 @@ script = ExtResource("2_f4lrn")
 title = "INKFALL"
 subtitle = "A HALLUCINATION OF SIN CITY"
 blurb = "It always rains in Basin City. The whole town is black and white, except the things that bleed. Tap through the long, wet night."
+picker_name = "STORY 0"
+picker_tagline = "A HALLUCINATION"
 music = "piano_noir"
 music_vol = 0.62
 acts = Array[ExtResource("3_a23g5")]([SubResource("Resource_smyvv"), SubResource("Resource_od4v8"), SubResource("Resource_w64lb")])
@@ -1232,6 +1234,8 @@ script = ExtResource("2_f4lrn")
 title = "INKFALL"
 subtitle = "THE LAST DEAL OF DANNY COLE"
 blurb = "A small man with a big debt goes looking for easy money in the underground casinos of Basin City. The house always wins. Tap through his last bad night."
+picker_name = "STORY 1"
+picker_tagline = "THE LAST DEAL OF DANNY COLE"
 music = "sad_jazz"
 acts = Array[ExtResource("3_a23g5")]([SubResource("Resource_dh3eh"), SubResource("Resource_b45nh"), SubResource("Resource_j8mxw"), SubResource("Resource_k8ncm"), SubResource("Resource_yfe1l")])
 
