@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/RotationGate.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/ui/PhoneIcon.gd" id="2"]
 
 [node name="RotationGate" type="Control"]
 layout_mode = 3
@@ -31,23 +32,39 @@ mouse_filter = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 36
+theme_override_constants/separation = 28
 alignment = 1
 
-[node name="Icon" type="Label" parent="Center/VBox"]
+[node name="PhoneIcon" type="Control" parent="Center/VBox"]
 layout_mode = 2
-theme_type_variation = &"GateIcon"
-text = "⟳"
-horizontal_alignment = 1
+custom_minimum_size = Vector2(66, 110)
+size_flags_horizontal = 4
+script = ExtResource("2")
 
-[node name="Message" type="Label" parent="Center/VBox"]
+[node name="MessageFS" type="Label" parent="Center/VBox"]
 layout_mode = 2
+custom_minimum_size = Vector2(420, 0)
 theme_type_variation = &"GateTitle"
-text = "ROTATE YOUR DEVICE"
+text = "This story reads best in landscape. Turn your screen, or stay in portrait."
 horizontal_alignment = 1
+autowrap_mode = 2
 
-[node name="Sub" type="Label" parent="Center/VBox"]
+[node name="MessageNoFS" type="Label" parent="Center/VBox"]
+visible = false
 layout_mode = 2
 theme_type_variation = &"GateSub"
-text = "This city is best seen wide."
+text = "Rotate your phone for the best view."
 horizontal_alignment = 1
+
+[node name="BtnRotate" type="Button" parent="Center/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"GateButtonPrimary"
+text = "ROTATE TO LANDSCAPE"
+
+[node name="BtnSkip" type="Button" parent="Center/VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"GateButton"
+text = "STAY IN PORTRAIT"

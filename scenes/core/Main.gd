@@ -13,6 +13,7 @@ const BOARD_SCENE := preload("res://scenes/board/Board.tscn")
 @onready var _post: ColorRect = $PostLayer/Post
 @onready var _start: StartScreen = $UILayer/StartScreen
 @onready var _hud: Hud = $UILayer/Hud
+@onready var _gate: RotationGate = $UILayer/RotationGate
 
 var _post_mat: ShaderMaterial
 var _board: Board
@@ -72,6 +73,9 @@ func _build_crossfade() -> void:
 func _on_enter(story: Story) -> void:
 	GameState.load_story(story)
 	_start.visible = false
+	_gate.begin_story()
+	if _gate.is_blocked():
+		await _gate.unblocked
 	_hud.build_nav(GameState.act_titles())
 	await _open_story(story)
 	_hud.begin_play()
@@ -281,6 +285,7 @@ func _on_exit_requested() -> void:
 	_set_ended_grade(false)
 	_hud.hide_caption()
 	AudioDirector.reset()
+	_gate.reset()
 	if GameState.story:
 		GameState.load_story(GameState.story)
 	_camera.zoom = Vector2.ONE

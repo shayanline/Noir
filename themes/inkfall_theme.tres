@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=27 format=3]
+[gd_resource type="Theme" load_steps=31 format=3]
 
 [ext_resource type="FontFile" path="res://fonts/Oswald.ttf" id="1_oswald"]
 [ext_resource type="FontFile" path="res://fonts/SpecialElite.ttf" id="2_elite"]
@@ -50,6 +50,52 @@ variation_opentype = {
 2003265652: 600.0
 }
 spacing_glyph = 6
+
+[sub_resource type="FontVariation" id="font_gate_text"]
+base_font = ExtResource("1_oswald")
+variation_opentype = {
+2003265652: 600.0
+}
+spacing_glyph = 8
+
+[sub_resource type="FontVariation" id="font_gate_btn"]
+base_font = ExtResource("1_oswald")
+variation_opentype = {
+2003265652: 500.0
+}
+spacing_glyph = 10
+
+[sub_resource type="StyleBoxFlat" id="gate_rotate_normal"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.925, 0.902, 0.839, 0.5)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 30.0
+content_margin_top = 18.0
+content_margin_right = 30.0
+content_margin_bottom = 18.0
+
+[sub_resource type="StyleBoxFlat" id="gate_rotate_hover"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.925, 0.902, 0.839, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+content_margin_left = 30.0
+content_margin_top = 18.0
+content_margin_right = 30.0
+content_margin_bottom = 18.0
 
 [sub_resource type="StyleBoxEmpty" id="empty"]
 
@@ -280,18 +326,34 @@ MenuRole/base_type = &"Label"
 MenuRole/colors/font_color = Color(0.925, 0.902, 0.839, 0.82)
 MenuRole/font_sizes/font_size = 15
 MenuRole/fonts/font = ExtResource("2_elite")
-GateIcon/base_type = &"Label"
-GateIcon/colors/font_color = Color(0.882, 0, 0.063, 1)
-GateIcon/font_sizes/font_size = 144
-GateIcon/fonts/font = ExtResource("1_oswald")
 GateTitle/base_type = &"Label"
 GateTitle/colors/font_color = Color(0.925, 0.902, 0.839, 1)
-GateTitle/font_sizes/font_size = 45
-GateTitle/fonts/font = ExtResource("1_oswald")
+GateTitle/font_sizes/font_size = 22
+GateTitle/fonts/font = SubResource("font_gate_text")
 GateSub/base_type = &"Label"
-GateSub/colors/font_color = Color(0.92, 0.9, 0.84, 0.6)
-GateSub/font_sizes/font_size = 27
-GateSub/fonts/font = ExtResource("1_oswald")
+GateSub/colors/font_color = Color(0.925, 0.902, 0.839, 0.6)
+GateSub/font_sizes/font_size = 22
+GateSub/fonts/font = SubResource("font_gate_text")
+GateButtonPrimary/base_type = &"Button"
+GateButtonPrimary/colors/font_color = Color(0.925, 0.902, 0.839, 0.82)
+GateButtonPrimary/colors/font_hover_color = Color(1, 1, 1, 1)
+GateButtonPrimary/colors/font_pressed_color = Color(1, 1, 1, 1)
+GateButtonPrimary/font_sizes/font_size = 18
+GateButtonPrimary/fonts/font = SubResource("font_gate_btn")
+GateButtonPrimary/styles/focus = SubResource("empty")
+GateButtonPrimary/styles/normal = SubResource("gate_rotate_normal")
+GateButtonPrimary/styles/hover = SubResource("gate_rotate_hover")
+GateButtonPrimary/styles/pressed = SubResource("gate_rotate_hover")
+GateButton/base_type = &"Button"
+GateButton/colors/font_color = Color(0.925, 0.902, 0.839, 0.82)
+GateButton/colors/font_hover_color = Color(1, 1, 1, 1)
+GateButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+GateButton/font_sizes/font_size = 18
+GateButton/fonts/font = SubResource("font_gate_btn")
+GateButton/styles/focus = SubResource("empty")
+GateButton/styles/normal = SubResource("empty")
+GateButton/styles/hover = SubResource("empty")
+GateButton/styles/pressed = SubResource("empty")
 TransCard/base_type = &"Label"
 TransCard/colors/font_color = Color(0.961, 0.949, 0.91, 1)
 TransCard/font_sizes/font_size = 75
