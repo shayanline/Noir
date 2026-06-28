@@ -60,9 +60,13 @@ jobs:
           unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
           mkdir -p ~/.config/godot
+          echo "--- Installed templates ---"
+          ls ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/ | grep -i web
+          echo "--- Godot version ---"
+          godot --version --headless
 
       - name: Import project (build .godot cache)
-        run: godot --headless --import --quit 2>&1 || true
+        run: godot --headless --import
 
       - name: Export for web
         run: |
