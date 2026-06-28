@@ -5,8 +5,9 @@ extends Node
 ## fonts fluidly across devices. Godot has no native equivalent, so this autoload computes the
 ## scale on every resize and exposes clamped font sizes that each UI component reads.
 ##
-## The content area is clamped to a landscape aspect band [ASPECT_MIN, ASPECT_MAX], matching the
-## legacy letterbox behaviour. Too tall: bars top and bottom. Too wide: bars left and right.
+## The story content area is clamped to a landscape aspect band [ASPECT_MIN, ASPECT_MAX] (16:10 to
+## 21:9). Outside that band the board is letterboxed (top and bottom bars when too tall, left and
+## right when too wide). The HUD, captions and navigation use the full viewport.
 ## The vmin is computed from the clamped content area, not the raw viewport.
 ##
 ## Usage: connect to `scale_changed`, then read the font sizes (fs_title, fs_sub, etc.) and
@@ -15,10 +16,11 @@ extends Node
 ## Emitted whenever the viewport resizes and the scale values have been recomputed.
 signal scale_changed
 
-## The legacy aspect band. Below ASPECT_MIN the screen is too tall (letterbox top and bottom).
-## Above ASPECT_MAX the screen is too wide (pillarbox left and right).
+## The aspect band for the story content area. Below ASPECT_MIN the screen is too tall (letterbox
+## top and bottom). Above ASPECT_MAX the screen is too wide (pillarbox left and right).
+## The HUD, captions and navigation use the full viewport, only the board is masked.
 const ASPECT_MIN := 16.0 / 10.0   # 1.6
-const ASPECT_MAX := 2.6
+const ASPECT_MAX := 21.0 / 9.0    # 2.333
 
 ## The clamped content rectangle in viewport coordinates. UI should be laid out within this.
 ## On a normal 16:9 or 16:10 display this equals the full viewport.

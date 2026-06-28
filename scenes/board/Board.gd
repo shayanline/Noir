@@ -35,9 +35,11 @@ func setup(a: Act) -> void:
 
 
 func _ready() -> void:
-	size = get_viewport_rect().size
+	var r := UIScale.content_rect
+	size = r.size if r.size.x > 2.0 else get_viewport_rect().size
 	if size.x < 2.0:
 		size = Vector2(1280, 720)
+	position = r.position
 	unit = minf(size.x, size.y) / BoardObject.DESIGN_HEIGHT
 	ground_y = act.ground * size.y
 	GameState.line_changed.connect(_on_state_line)
@@ -106,9 +108,11 @@ func _build_weather() -> void:
 		return
 	_rain = RAIN_SCENE.instantiate()
 	_rain.blood = act.blood_rain
+	_rain.area = size
 	_rain.z_index = 60
 	add_child(_rain)
 	_lightning = LIGHTNING_SCENE.instantiate()
+	_lightning.area = size
 	_lightning.z_index = 70
 	add_child(_lightning)
 
