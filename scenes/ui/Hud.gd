@@ -118,6 +118,8 @@ func _build_caption() -> void:
 	_caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption_label.custom_minimum_size = Vector2(560, 0)
 	_caption_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# legacy CSS uses text-align: center on the caption box
+	_caption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_caption.add_child(_caption_label)
 
 	_cap_mat = ShaderMaterial.new()
@@ -716,7 +718,17 @@ func _rescale() -> void:
 	_caption_label.add_theme_font_size_override("normal_font_size", UIScale.fs_caption)
 	_caption_label.add_theme_font_size_override("bold_font_size", UIScale.fs_caption)
 	_caption_label.custom_minimum_size.x = UIScale.caption_min_w
+	_caption_label.custom_maximum_size.x = UIScale.caption_max_w
 	_cap_tex.offset_bottom = -UIScale.caption_bottom
+	# scale the caption panel padding to match the legacy clamp
+	var cap_sb: StyleBox = _caption.get_theme_stylebox("panel")
+	if cap_sb is StyleBoxFlat:
+		var dup := cap_sb.duplicate() as StyleBoxFlat
+		dup.content_margin_left = UIScale.caption_pad_h
+		dup.content_margin_right = UIScale.caption_pad_h
+		dup.content_margin_top = UIScale.caption_pad_v
+		dup.content_margin_bottom = UIScale.caption_pad_v
+		_caption.add_theme_stylebox_override("panel", dup)
 	# tap note
 	_tap.add_theme_font_size_override("font_size", UIScale.fs_note)
 	_tap.offset_bottom = -UIScale.tap_bottom

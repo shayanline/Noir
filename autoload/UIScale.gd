@@ -83,6 +83,13 @@ var card_sep := 10
 ## Caption min width.
 var caption_min_w := 560.0
 
+## Caption max width. Legacy: min(90vw, 600px), wide desktop override: min(52vw, 600px).
+var caption_max_w := 600.0
+
+## Caption padding. Legacy: clamp(9, 1.7vmin, 13) vertical, clamp(12, 2.2vmin, 18) horizontal.
+var caption_pad_h := 18.0
+var caption_pad_v := 13.0
+
 ## Caption bottom offset (from the bottom of the viewport).
 var caption_bottom := 48.0
 
@@ -152,6 +159,9 @@ func _recompute() -> void:
 	tales_gap = _clamp_i(12, vmin * 0.02, 18)
 	card_sep = _clamp_i(6, vmin * 0.012, 10)
 	caption_min_w = clampf(cw * 0.30, 320, 600)
+	caption_max_w = minf(cw * 0.9, 600)
+	caption_pad_h = clampf(vmin * 0.022, 12, 18)
+	caption_pad_v = clampf(vmin * 0.017, 9, 13)
 	caption_bottom = clampf(safe_bottom + vmin * 0.04, 24, 60)
 	tap_bottom = maxf(safe_bottom + 6, 10)
 
