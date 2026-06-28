@@ -97,36 +97,41 @@ func start() -> void:
 	_started = true
 
 
-func play_music(key: String, vol := 0.5) -> void:
+func play_music(key: String, vol := 0.5, fade := 1.2) -> void:
 	if not MUSIC.has(key):
 		return
 	_music_vol = vol
 	_music.stream = _load_loop(MUSIC[key])
-	_music.volume_db = SILENCE_DB
-	_music.play()
-	if _started:
-		_fade(_music, vol, 1.2)
+	if fade > 0.0:
+		_music.volume_db = SILENCE_DB
+		_music.play()
+		if _started:
+			_fade(_music, vol, fade)
+	else:
+		_music.volume_db = _linear_to_db(0.0 if _muted else vol)
+		_music.play()
 
 
-func enter_scene(ambience := "", indoor := false, ambience_vol := 0.4, rain_vol := 0.16) -> void:
-	## crossfade ambience + rain for a new act, fade any ringing one-shots and held loops
+func enter_scene(ambience := "", indoor := false, ambience_vol := 0.4, rain_vol := 0.16, fade := 0.6) -> void:
+	## crossfade ambience + rain for a new act, fade any ringing one-shots and held loops.
+	## pass fade = 0 for an instant start (the first act opener).
 	duck(0.5)
 	stop_loops(0.45)
 	_amb_vol = ambience_vol
 	if ambience != "" and AMBIENCE.has(ambience):
 		_amb.stream = _load_loop(AMBIENCE[ambience])
 		_amb.play()
-		_fade(_amb, ambience_vol, 0.6)
+		_fade(_amb, ambience_vol, fade)
 	else:
-		_fade(_amb, 0.0, 0.5)
+		_fade(_amb, 0.0, fade if fade > 0.0 else 0.5)
 	_rain_vol = rain_vol
 	if not indoor:
 		if _rain.stream == null:
 			_rain.stream = _load_loop(RAIN)
 			_rain.play()
-		_fade(_rain, rain_vol, 0.6)
+		_fade(_rain, rain_vol, fade)
 	else:
-		_fade(_rain, 0.0, 0.6)
+		_fade(_rain, 0.0, fade if fade > 0.0 else 0.6)
 
 
 # --- one-shots ----------------------------------------------------------

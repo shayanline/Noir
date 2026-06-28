@@ -130,12 +130,10 @@ func _layout_letterbox() -> void:
 
 func _on_enter(story: Story) -> void:
 	GameState.load_story(story)
-	# Legacy sequence: hide the start screen first (like setStage('playing') in boot.js), then raise
-	# the gate. The gate's opaque BG covers the now hidden start screen.
-	_start.visible = false
 	_gate.begin_story()
 	if _gate.is_blocked():
 		await _gate.started
+	_start.visible = false
 	_hud.build_nav(GameState.act_titles())
 	await _open_story(story)
 	_hud.begin_play()
@@ -148,7 +146,6 @@ func _open_story(story: Story) -> void:
 	Transitions.cover()
 	var title := story.subtitle if story.subtitle != "" else story.title
 	await Transitions.show_card(title, Palette.TITLE_HOLD, false)
-	AudioDirector.start()
 	await _enter_act(0, true)
 
 
@@ -159,17 +156,17 @@ func _enter_act(index: int, first: bool) -> void:
 	_swap_board(act)
 	if first:
 		# the screen is already black from the story-title card, so show the first act card here too.
-		# a short beat of darkness between the story title fading out and the act title appearing,
-		# so the two cards do not run into each other.
-		await get_tree().create_timer(0.5).timeout
+		# the score, the whoosh, and the audio system all start together on the first act title.
+		# the music starts at full volume (no fade in) so it hits cleanly with the whoosh.
+		AudioDirector.start()
 		var story := GameState.story
 		if story.music != "":
-			AudioDirector.play_music(story.music, story.music_vol)
+			AudioDirector.play_music(story.music, story.music_vol, 0.0)
+		_cue_audio(act, 0.0)
 		AudioDirector.whoosh()
 		await Transitions.show_card(act.title, Palette.OPEN_CARD_HOLD)
 		_zoom_in()
 		await Transitions.open()
-	_cue_audio(act)
 	_hud.set_scene_tag(act.title)
 	_hud.set_current_act(GameState.act_index)
 	GameState.notify_line()
@@ -187,8 +184,8 @@ func _swap_board(act: Act) -> void:
 	_world.add_child(_board)
 
 
-func _cue_audio(act: Act) -> void:
-	AudioDirector.enter_scene(act.ambience, act.indoor, act.ambience_vol, act.rain_vol)
+func _cue_audio(act: Act, fade := 0.6) -> void:
+	AudioDirector.enter_scene(act.ambience, act.indoor, act.ambience_vol, act.rain_vol, fade)
 
 
 func _zoom_in() -> void:
@@ -257,7 +254,9 @@ func advance() -> void:
 func _to_act(index: int) -> void:
 	_busy = true
 	_hud.hide_caption()
-	AudioDirector.duck(0.8)
+	# kill the old act's sound effects immediately so they do not leak through the wipe
+	AudioDirector.duck(0.3)
+	AudioDirector.stop_loops(0.3)
 	await Transitions.close()
 	await _enter_act_covered(index)
 
@@ -266,10 +265,10 @@ func _enter_act_covered(index: int) -> void:
 	GameState.go_to_act(index)
 	var act := GameState.current_act()
 	_swap_board(act)
+	_cue_audio(act)
 	AudioDirector.whoosh()
 	await Transitions.show_card(act.title)
 	await Transitions.open()
-	_cue_audio(act)
 	_hud.set_scene_tag(act.title)
 	_hud.set_current_act(GameState.act_index)
 	GameState.notify_line()

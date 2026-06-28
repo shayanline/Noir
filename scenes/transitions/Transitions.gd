@@ -47,10 +47,12 @@ func open(dur := -1.0) -> void:
 
 
 ## show a title card over the ink. Back to back calls crossfade: the old title fades out on one
-## label while the new one fades in on the other, so there is never a frame of pure black between
-## them. If `last` is true (the default) the method awaits the full fade out before returning. Set
-## `last` to false when another card follows immediately, so the fade out runs in the background
-## and the next show_card can crossfade into it.
+## label while the new one fades in on the other. If `last` is true (the default) the method awaits
+## the full fade out before returning. Set `last` to false when another card follows immediately:
+## the fade out starts, and the method returns after (1 - CARD_OVERLAP) of the fade out has elapsed,
+## so the next show_card can start its fade in while the old one is still partially visible.
+## CARD_OVERLAP = 0 means fully sequential (fade out finishes, then fade in starts).
+## CARD_OVERLAP = 1 means fully simultaneous (both run at the same time).
 func show_card(title: String, hold := -1.0, last := true) -> void:
 	if hold < 0.0:
 		hold = Palette.CARD_HOLD
@@ -69,10 +71,12 @@ func show_card(title: String, hold := -1.0, last := true) -> void:
 		tw.tween_property(cur, "modulate:a", 0.0, Palette.CARD_FADE)
 		await tw.finished
 	else:
-		# return after the hold so the caller can start the next card while this one is still visible
 		await tw.finished
-		# kick off the fade out in the background (the next show_card will crossfade into it)
+		# start the fade out, then wait for part of it before returning so the next card overlaps
 		create_tween().tween_property(cur, "modulate:a", 0.0, Palette.CARD_FADE)
+		var wait := Palette.CARD_FADE * (1.0 - Palette.CARD_OVERLAP)
+		if wait > 0.01:
+			await get_tree().create_timer(wait).timeout
 
 
 func show_end() -> void:

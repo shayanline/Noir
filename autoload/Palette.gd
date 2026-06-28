@@ -38,10 +38,11 @@ const GRAIN_ALPHA := 0.05
 const VIGNETTE := 0.7
 const PARALLAX_LERP := 0.08
 
-const TRANS_IN := 0.5        # ink wipe close duration (s)
-const TRANS_OUT := 0.6       # ink wipe open duration (s)
-const CARD_FADE := 0.4       # title card fade in and fade out duration (s), same both ways
+const TRANS_IN := 0.7        # ink wipe close duration (s)
+const TRANS_OUT := 0.8       # ink wipe open duration (s)
+const CARD_FADE := 0.3       # title card fade in and fade out duration (s), same both ways
+const CARD_OVERLAP := 0.0    # how much the outgoing and incoming card fades overlap (0 = sequential, 1 = fully simultaneous)
 const CARD_HOLD := 2.0       # act-card dwell (s)
-const OPEN_CARD_HOLD := 2.8  # the first act card (right after the story title) lingers a touch longer
-const TITLE_HOLD := 3.4      # opening story-title card dwell (s)
+const OPEN_CARD_HOLD := 2.0  # the first act card (right after the story title)
+const TITLE_HOLD := 2.5      # opening story-title card dwell (s)
 const BEAT_FADE := 0.7       # caption beat crossfade (s)
