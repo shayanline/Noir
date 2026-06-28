@@ -1,0 +1,163 @@
+name: Branch previews
+
+# Exports the Godot project for web and publishes every branch as a static
+# preview on the gh-pages branch:
+#   master          -> site root            (https://<owner>.github.io/Inkfall/)
+#   any other branch -> /<branch-with-slashes-as-dashes>/  subfolder
+# Deleting a branch removes its preview folder.
+#
+# The push event runs the copy of this workflow that lives on the pushed
+# branch, so a branch only gets a preview once it contains this file.
+# Branches cut from master after this lands inherit it automatically.
+#
+# The delete event always runs the workflow from the default branch, so this
+# file must live on the default branch for cleanup to fire.
+#
+# Loop prevention (defence in depth, any one layer is enough):
+#   1. All pushes use the automatic GITHUB_TOKEN, and GitHub does not start
+#      new runs from GITHUB_TOKEN pushes.
+#   2. The push trigger ignores the gh-pages branch.
+#   3. Every commit carries [skip ci].
+#   4. The publish job refuses to run for commits authored by the bot.
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!gh-pages'
+  delete:
+
+env:
+  GODOT_VERSION: "4.7"
+
+permissions:
+  contents: write
+
+# Serialise writes to gh-pages so parallel branch pushes do not collide.
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event_name == 'push' &&
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      github.event.head_commit.author.name != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout pushed branch
+        uses: actions/checkout@v4
+
+      - name: Install Godot and export templates
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          mkdir -p ~/.config/godot
+
+      - name: Import project (build .godot cache)
+        run: godot --headless --import
+
+      - name: Export for web
+        run: |
+          mkdir -p build/web
+          godot --headless --verbose --export-release "Web" build/web/index.html
+
+      - name: Compute target folder
+        id: target
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          slug="${branch//\//-}"
+          if [ "$branch" = "master" ]; then
+            echo "dest=" >> "$GITHUB_OUTPUT"
+            echo "Publishing master to site root"
+          else
+            echo "dest=$slug" >> "$GITHUB_OUTPUT"
+            echo "Publishing $branch to /$slug/"
+          fi
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./build/web
+          destination_dir: ${{ steps.target.outputs.dest }}
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'preview: ${{ github.ref_name }} (${{ github.sha }}) [skip ci]'
+
+  cleanup:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove preview folder for deleted branch
+        run: |
+          branch="${{ github.event.ref }}"
+          slug="${branch//\//-}"
+          if [ -z "$slug" ] || [ "$slug" = "master" ]; then
+            echo "Refusing to delete the site root."
+            exit 0
+          fi
+          if [ -d "$slug" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git rm -rf -- "$slug"
+            git commit -m "cleanup: remove preview for deleted branch $branch [skip ci]"
+            git push origin gh-pages
+          else
+            echo "No preview folder '$slug' to remove."
+          fi
+
+  # Keep the live preview index in the default branch README in sync. Runs
+  # after a publish or a cleanup. The commit carries [skip ci] so it never
+  # loops.
+  index:
+    needs: [publish, cleanup]
+    if: ${{ always() && (needs.publish.result == 'success' || needs.cleanup.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Update preview index
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          repo="${{ github.event.repository.name }}"
+          base="https://${owner}.github.io/${repo}/"
+          manifest=".github/previews.json"
+          if [ "${{ github.event_name }}" = "delete" ]; then
+            branch="${{ github.event.ref }}"
+            node .github/scripts/preview-index.mjs remove "$manifest" "$branch"
+          else
+            branch="${GITHUB_REF_NAME}"
+            slug="${branch//\//-}"
+            if [ "$branch" = "master" ]; then url="$base"; else url="${base}${slug}/"; fi
+            node .github/scripts/preview-index.mjs upsert "$manifest" "$branch" "$url" "${GITHUB_SHA:0:7}" "$(date -u '+%Y-%m-%d %H:%M')"
+          fi
+          node .github/scripts/preview-index.mjs render "$manifest" README.md
+          if git diff --quiet; then
+            echo "Index already up to date."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add "$manifest" README.md
+          git commit -m "docs: update live preview index [skip ci]"
+          git push origin HEAD:${{ github.event.repository.default_branch }}

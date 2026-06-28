@@ -4,7 +4,10 @@
 # Godot legacy / general
 .import/
 export.cfg
-export_presets.cfg
+# export_presets.cfg is tracked (needed by CI for web export)
+
+# Export credentials contain secrets, never track
+.godot/export_credentials.cfg
 
 # Imported translations (auto generated from CSV)
 *.translation
