@@ -51,9 +51,11 @@ function collectMetas(dir) {
   return metas;
 }
 
-// Map of head branch to { number, url } for every open pull request. Returns an
-// empty map when the repo or token is missing, so the column degrades to a dash
-// rather than failing the render.
+// Map of head branch to { number, url } for the open pull request. PR links are
+// optional, so any problem (missing token, rate limit, transient error) just
+// degrades the column to a dash and never fails the render or the deploy. Only
+// same repo pull requests count, since a fork PR can share a branch name with a
+// local branch, and the lowest numbered PR wins when a branch has more than one.
 async function fetchOpenPrs() {
   const token = process.env.GITHUB_TOKEN;
   const map = new Map();
@@ -65,21 +67,27 @@ async function fetchOpenPrs() {
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'inkfall-preview-dashboard',
   };
-  for (let page = 1; ; page++) {
-    const res = await fetch(
-      `https://api.github.com/repos/${repo}/pulls?state=open&per_page=100&page=${page}`,
-      { headers },
-    );
-    if (!res.ok) {
-      throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
-    }
-    const prs = await res.json();
-    for (const pr of prs) {
-      if (!map.has(pr.head.ref)) {
-        map.set(pr.head.ref, { number: pr.number, url: pr.html_url });
+  try {
+    for (let page = 1; ; page++) {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/pulls?state=open&per_page=100&page=${page}`,
+        { headers },
+      );
+      if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+      const prs = await res.json();
+      for (const pr of prs) {
+        // Ignore fork PRs: their head ref can collide with a local branch name.
+        if (!pr.head.repo || pr.head.repo.full_name !== repo) continue;
+        const prev = map.get(pr.head.ref);
+        if (!prev || pr.number < prev.number) {
+          map.set(pr.head.ref, { number: pr.number, url: pr.html_url });
+        }
       }
+      if (prs.length < 100) break;
     }
-    if (prs.length < 100) break;
+  } catch (err) {
+    console.warn(`render-dashboard: could not fetch pull requests, rendering without PR links: ${err.message}`);
+    return new Map();
   }
   return map;
 }

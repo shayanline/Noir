@@ -77,11 +77,18 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 RENDER="$REPO_ROOT/.github/scripts/render-dashboard.mjs"
 SRC_WEB="$REPO_ROOT/build/web"
 
-SLUG="${BRANCH//\//-}"
 if [ "$BRANCH" = "master" ]; then
+  SLUG="master"
   DIR="."
   URL="$BASE"
 else
+  # A readable slug plus a short hash of the full branch name. The hash keeps
+  # the folder unique, so names that share a readable slug (feat/x and feat-x)
+  # never collide and overwrite each other's preview. git hash-object is
+  # deterministic and available wherever git is, so remove computes the same
+  # folder. cut, not head, so it works the same on any platform.
+  hash="$(printf '%s' "$BRANCH" | git hash-object --stdin | cut -c1-8)"
+  SLUG="${BRANCH//\//-}-$hash"
   DIR="branches/$SLUG"
   URL="${BASE%/}/branches/$SLUG/"
 fi
@@ -111,6 +118,11 @@ apply_op() {
     failed)   write_meta "$DIR" failed ;;
     deployed)
       [ -d "$SRC_WEB" ] || fail "no build at $SRC_WEB"
+      # Replace a non master preview wholesale so a removed or renamed asset
+      # cannot linger and serve a mixed build. The root (master) keeps its
+      # siblings (branches/, _dashboard, .nojekyll), so it is overwritten in
+      # place rather than wiped.
+      [ "$BRANCH" = "master" ] || rm -rf "$DIR"
       mkdir -p "$DIR"
       cp -R "$SRC_WEB/." "$DIR/"
       write_meta "$DIR" deployed
@@ -130,10 +142,12 @@ attempt() {
   trap 'rm -rf "$work"' RETURN
 
   if ! git clone --quiet --depth 1 --branch gh-pages "$REMOTE" "$work" 2>/dev/null; then
-    # gh-pages does not exist yet: start an orphan branch.
-    git clone --quiet --depth 1 "$REMOTE" "$work"
-    git -C "$work" checkout --quiet --orphan gh-pages
-    git -C "$work" rm -rqf . >/dev/null 2>&1 || true
+    # gh-pages does not exist yet: start from a truly empty tree, never from the
+    # default branch, so the repository contents can never be published by
+    # accident. The first push creates gh-pages.
+    rm -rf "$work" && mkdir -p "$work"
+    git -C "$work" init --quiet -b gh-pages
+    git -C "$work" remote add origin "$REMOTE"
   fi
 
   (
