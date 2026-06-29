@@ -98,6 +98,7 @@ func _on_card_input(e: InputEvent, idx: int) -> void:
 
 func _select(i: int) -> void:
 	_selected = i
+	_hovered = -1
 	var s: Story = _stories[i]
 	_subtitle.text = s.subtitle
 	_blurb.text = s.blurb
