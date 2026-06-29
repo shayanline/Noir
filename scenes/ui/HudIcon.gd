@@ -3,8 +3,8 @@ extends Control
 ## A HUD chip icon drawn in code (so it centres exactly and renders the same everywhere, the way
 ## Inkfall drew its CSS icons). Three kinds: the hamburger menu, the fullscreen corners and the
 ## poster frame. The tint follows the parent button's hover state.
-## The line draws pass antialiased = false: the web Compatibility renderer does not support
-## antialiased 2D line drawing, where it rendered the glyph lines wrong.
+## The line draw calls pass antialiased = false, the web Compatibility renderer does not support
+## antialiased 2D line drawing, which rendered the glyph lines incorrectly.
 
 enum Kind { MENU, FULLSCREEN, POSTER }
 
