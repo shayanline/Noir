@@ -38,6 +38,7 @@ var _navdrop: VBoxContainer
 var _end_box: CenterContainer
 var _end_row: HBoxContainer
 
+var _modal_layer: CanvasLayer
 var _menu: Control
 var _menu_views := {}
 var _sound_btn: Button
@@ -233,11 +234,22 @@ func _build_actsel() -> void:
 	_end_box.add_child(_end_row)
 
 
+## The pause menu and the poster modal must sit above everything, including the Transitions layer
+## (100) that draws the act cards and THE END, and the start screen. A dedicated high CanvasLayer
+## lifts them over the lot. It inherits the HUD's PROCESS_MODE_ALWAYS, so the menu still works paused.
+func _modal_root() -> CanvasLayer:
+	if _modal_layer == null:
+		_modal_layer = CanvasLayer.new()
+		_modal_layer.layer = 200
+		add_child(_modal_layer)
+	return _modal_layer
+
+
 func _build_menu() -> void:
 	_menu = Control.new()
 	_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_menu.visible = false
-	add_child(_menu)
+	_modal_root().add_child(_menu)
 	var scrim := ColorRect.new()
 	scrim.color = _SCRIM
 	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -403,7 +415,7 @@ func _build_poster() -> void:
 	_poster = Control.new()
 	_poster.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_poster.visible = false
-	add_child(_poster)
+	_modal_root().add_child(_poster)
 	# same chrome as the pause menu: a dimmed scrim behind one double ruled framed card
 	var scrim := ColorRect.new()
 	scrim.color = _SCRIM
