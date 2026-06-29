@@ -103,6 +103,9 @@ func _select(i: int) -> void:
 	_subtitle.text = s.subtitle
 	_blurb.text = s.blurb
 	_repaint_cards()
+	# stories have different length subtitles and blurbs, so re-fit the column to the new content,
+	# otherwise the taller story keeps the previous story's scale and overflows
+	call_deferred("_fit_to_viewport")
 
 
 ## track the hovered card. `only_if` clears the hover only when it still belongs to that card, so a
@@ -165,6 +168,9 @@ func _rescale() -> void:
 	_heading.add_theme_font_size_override("font_size", UIScale.fs_label)
 	_enter.add_theme_font_size_override("font_size", UIScale.fs_sub)
 	_vbox.add_theme_constant_override("separation", UIScale.vbox_sep)
+	# fix the column width to most of the screen so the subtitle and blurb wrap within it instead of
+	# a long story title stretching the column off the edges
+	_vbox.custom_minimum_size.x = get_viewport_rect().size.x * 0.9
 	_tales.add_theme_constant_override("separation", UIScale.tales_gap)
 	# stack the story cards in portrait (a narrow phone held upright), sit them in a row otherwise,
 	# so the bigger portrait text never has to cram two cards across a narrow screen
