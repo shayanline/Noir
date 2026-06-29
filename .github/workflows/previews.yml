@@ -11,13 +11,19 @@ name: Branch previews
 # from the deployed folders and the open pull requests on every change. The
 # README links to it, so the preview index never commits to a source branch.
 #
-# Status: a push first marks the branch "building", then "deployed" once the
-# export publishes, or "failed" if it does not. The dashboard refreshes itself.
+# A push runs two jobs: build exports the web build and uploads it as an
+# artifact, then publish deploys that artifact to gh-pages. Splitting them means
+# a failed publish can be re-run without exporting again, and the Godot binary
+# and export templates are cached, so a warm run skips the slow download.
+#
+# Status: a push first marks the branch "building", then "deployed" once publish
+# succeeds, or "failed" if either job does not. The dashboard refreshes itself.
 #
 # Concurrency and safety:
-#   - Builds use a per branch concurrency group, so different branches build in
-#     parallel and never cancel each other. Pushing many branches at once cannot
-#     drop a preview. Re-pushing the same branch cancels only its own stale run.
+#   - build and publish share a per branch concurrency group, so different
+#     branches run in parallel and never cancel each other, while a newer push
+#     to the same branch cancels its own stale build or publish (no stale
+#     deploy). Pushing many branches at once cannot drop a preview.
 #   - All gh-pages writes go through tools/ci/ghpages.sh, which touches only the
 #     branch's own folder and re-clones and replays on a rejected push, so
 #     parallel deploys converge without losing a folder or a row.
@@ -47,13 +53,14 @@ jobs:
       github.event_name == 'push' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-24.04
-    # Per branch group: branches build in parallel, a branch cancels only its
-    # own superseded run.
     concurrency:
-      group: preview-build-${{ github.ref }}
+      group: preview-${{ github.ref }}
       cancel-in-progress: true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      base: ${{ steps.meta.outputs.base }}
+      sha: ${{ steps.meta.outputs.sha }}
     steps:
       - name: Checkout pushed branch
         uses: actions/checkout@v4
@@ -72,16 +79,31 @@ jobs:
       - name: Mark building
         run: bash tools/ci/ghpages.sh building "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
+      - name: Cache Godot and export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
       - name: Install Godot and export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
         run: |
+          mkdir -p ~/godot-bin
           wget -q --tries=3 --retry-connrefused "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           wget -q --tries=3 --retry-connrefused "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
-          chmod +x /usr/local/bin/godot
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+
+      - name: Put Godot on PATH
+        run: |
+          echo "$HOME/godot-bin" >> "$GITHUB_PATH"
           mkdir -p ~/.config/godot
 
       - name: Import project (build .godot cache)
@@ -92,13 +114,44 @@ jobs:
           mkdir -p build/web
           godot --headless --verbose --export-release "Web" build/web/index.html
 
-      - name: Mark deployed
-        run: bash tools/ci/ghpages.sh deployed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: build/web
+          retention-days: 2
 
       - name: Mark failed
         # Only after a valid name passed the gate, so an invalid name writes nothing.
         if: failure() && steps.validate.outcome == 'success'
         run: bash tools/ci/ghpages.sh failed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # Same group as build: a newer push cancels a stale publish too.
+    concurrency:
+      group: preview-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout pushed branch
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: build/web
+
+      - name: Mark deployed
+        run: bash tools/ci/ghpages.sh deployed "${GITHUB_REF_NAME}" "${{ needs.build.outputs.sha }}" "${{ needs.build.outputs.base }}"
+
+      - name: Mark failed
+        # Build succeeded (the name is valid), so a failure here is the publish.
+        if: failure()
+        run: bash tools/ci/ghpages.sh failed "${GITHUB_REF_NAME}" "${{ needs.build.outputs.sha }}" "${{ needs.build.outputs.base }}"
 
   cleanup:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
