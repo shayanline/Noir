@@ -35,6 +35,8 @@ var _moon_light: PointLight2D
 var _rain: RainField
 var _ripples: RainRipples
 var _lightning: Lightning
+var _light_sync_timer := 0.0
+const _LIGHT_SYNC_INTERVAL := 0.2   ## how often ripple lights are refreshed (seconds)
 
 
 func setup(a: Act) -> void:
@@ -232,6 +234,17 @@ func _build_weather() -> void:
 	_lightning.area = size
 	_lightning.z_index = 70
 	add_child(_lightning)
+
+
+# --- live light sync (ripple coupling) -----------------------------------------------------
+
+func _process(delta: float) -> void:
+	if _ripples == null:
+		return
+	_light_sync_timer -= delta
+	if _light_sync_timer <= 0.0:
+		_light_sync_timer = _LIGHT_SYNC_INTERVAL
+		_ripples.lights = _collect_lights()
 
 
 # --- flow ----------------------------------------------------------------------------------
