@@ -54,8 +54,8 @@ func _draw() -> void:
 	draw_texture_rect(_halftone, Rect2(0, 0, PW, ph), true, Color(1, 1, 1, 0.06))
 
 
-## Nine red flecks scattered around each corner of the frame, seeded so a given frame always draws
-## the same splatter.
+## Nine red flecks scattered around each corner of the frame. The seed is the corner index alone, so
+## the splatter is a fixed pattern on every poster (a deterministic decoration, matching the legacy).
 func _draw_splatter(fw: int, fh: int) -> void:
 	var corners := [
 		Vector2(MARGIN, FY), Vector2(MARGIN + fw, FY),

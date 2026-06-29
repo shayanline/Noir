@@ -26,6 +26,7 @@ const _CAP_OUT := 0.46                 # narration torn wipe out (s)
 const _CAP_VARIANTS := 3
 
 var _tag: Label
+var _tag_font: FontVariation
 var _caption: PanelContainer
 var _caption_label: RichTextLabel
 var _cap_vp: SubViewport
@@ -761,11 +762,13 @@ func _rescale() -> void:
 	# scene tag position
 	_tag.position = Vector2(edg, edg)
 	_tag.add_theme_font_size_override("font_size", UIScale.fs_label)
-	# the scene tag carries the legacy's wide 0.25em tracking, proportional to its size
-	var tag_font := FontVariation.new()
-	tag_font.base_font = _ELITE
-	tag_font.spacing_glyph = roundi(UIScale.fs_label * 0.25)
-	_tag.add_theme_font_override("font", tag_font)
+	# the scene tag carries the legacy's wide 0.25em tracking, proportional to its size. The
+	# FontVariation is created once and only its spacing is updated, to avoid per resize allocations.
+	if _tag_font == null:
+		_tag_font = FontVariation.new()
+		_tag_font.base_font = _ELITE
+		_tag.add_theme_font_override("font", _tag_font)
+	_tag_font.spacing_glyph = roundi(UIScale.fs_label * 0.25)
 	# caption: resize the SubViewport to match caption_max_w so text is never clipped on HiDPI.
 	# supersample 2x only at low dpr, since a HiDPI canvas is already crisp, to save render target memory
 	var cap_w := maxi(roundi(UIScale.caption_max_w), _CAP_VP.x)

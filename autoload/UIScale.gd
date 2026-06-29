@@ -167,12 +167,13 @@ func _recompute() -> void:
 	var boost := _is_touch_web()
 	var win := Vector2(DisplayServer.window_get_size())
 	var fit := minf(win.x / 1920.0, win.y / 1080.0) if win.x > 0.0 and win.y > 0.0 else 1.0
-	# full compensation, both directions: the fit factor is below 1 in portrait and above 1 in
-	# landscape, so the same font reads small in portrait and big in landscape. Dividing by it makes
-	# the perceived size the same in either orientation. Applied to everything that scales with ui
-	# (the HUD chips too, which otherwise come out oversized on a tall phone in landscape). Only the
-	# pause menu stays out of this (it scales on dpr in the theme). Touch web only, so desktop and
-	# native are untouched.
+	# fit is the canvas_items stretch factor that maps the 1920x1080 base to the window, and it
+	# differs between portrait and landscape on the same phone, so the same coordinate font reads at
+	# a different physical size in each orientation. comp divides by it (clamped) to cancel that, so
+	# the perceived size stays consistent in either orientation. Applied to everything that scales
+	# with ui (the HUD chips too, which otherwise come out oversized on a tall phone in landscape).
+	# Only the pause menu stays out of this (it scales on dpr in the theme). Touch web only, so
+	# desktop and native are untouched.
 	var comp := (1.0 / clampf(fit, 0.45, 1.6)) if boost else 1.0
 	ui_comp = comp
 	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0) * comp     # HUD chrome and general UI
