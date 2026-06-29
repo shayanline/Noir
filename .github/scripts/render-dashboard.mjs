@@ -92,6 +92,52 @@ async function fetchOpenPrs() {
   return map;
 }
 
+// Set of branch names that currently exist on the remote. Returns null when the
+// repo or token is missing, or on any error, meaning "unknown, do not filter",
+// so a transient failure never hides live previews.
+async function fetchExistingBranches() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!repo || !token) return null;
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'inkfall-preview-dashboard',
+  };
+  const names = new Set();
+  try {
+    for (let page = 1; ; page++) {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo}/branches?per_page=100&page=${page}`,
+        { headers },
+      );
+      if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+      const branches = await res.json();
+      for (const b of branches) names.add(b.name);
+      if (branches.length < 100) break;
+    }
+  } catch (err) {
+    console.warn(`render-dashboard: could not list branches, not filtering: ${err.message}`);
+    return null;
+  }
+  return names;
+}
+
+// One row per branch: keep the most recently updated meta when a branch somehow
+// has more than one deployed folder (for example after the slug scheme changed),
+// and drop any folder whose branch no longer exists (master is always kept).
+function oneRowPerBranch(metas, existing) {
+  const byBranch = new Map();
+  for (const m of metas) {
+    const prev = byBranch.get(m.branch);
+    if (!prev || (m.updated || '') > (prev.updated || '')) byBranch.set(m.branch, m);
+  }
+  let list = [...byBranch.values()];
+  if (existing) list = list.filter((m) => m.branch === 'master' || existing.has(m.branch));
+  return list;
+}
+
 const order = (a, b) =>
   a.branch === b.branch ? 0
     : a.branch === 'master' ? -1
@@ -178,7 +224,8 @@ ${rows}
 `;
 }
 
-const metas = collectMetas(root).sort(order);
+const existing = await fetchExistingBranches();
+const metas = oneRowPerBranch(collectMetas(root), existing).sort(order);
 const prs = await fetchOpenPrs();
 const outDir = join(root, '_dashboard');
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
