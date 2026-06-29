@@ -37,7 +37,7 @@
     <p class="sub">Live build of every branch. This page refreshes itself, and rebuilds from the deployed folders on each run. Generated 2026-06-29 22:51 UTC.</p>
     <table>
       <thead>
-        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated (UTC)</th><th>Commit</th></tr>
+        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated</th><th>Commit</th></tr>
       </thead>
       <tbody>
       <tr>
@@ -45,19 +45,54 @@
         <td><a href="https://shayanline.github.io/Inkfall/">open</a></td>
         <td><span class="muted">-</span></td>
         <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 22:51</td>
+        <td class="updated" data-utc="2026-06-29 22:51">2026-06-29 22:51 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/43fe6bd"><code>43fe6bd</code></a></td>
       </tr>
       <tr>
         <td><code>fix/dashboard-local-time</code></td>
         <td><a href="https://shayanline.github.io/Inkfall/branches/fix-dashboard-local-time-9b771b81/">open</a></td>
         <td><a href="https://github.com/shayanline/Inkfall/pull/8">#8</a></td>
-        <td><span class="badge building">building</span></td>
-        <td>2026-06-29 22:51</td>
+        <td><span class="badge deployed">deployed</span></td>
+        <td class="updated" data-utc="2026-06-29 22:51">2026-06-29 22:51 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/cbd1abf"><code>cbd1abf</code></a></td>
       </tr>
       </tbody>
     </table>
   </main>
+  <script>
+    (function () {
+      if (!('Intl' in window) || typeof Intl.RelativeTimeFormat !== 'function') return;
+      var rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+      var units = [
+        ['year', 31536000],
+        ['month', 2592000],
+        ['day', 86400],
+        ['hour', 3600],
+        ['minute', 60],
+      ];
+      function ago(date) {
+        var diffSeconds = (date.getTime() - Date.now()) / 1000;
+        for (var i = 0; i < units.length; i++) {
+          var unit = units[i][0];
+          var seconds = units[i][1];
+          if (Math.abs(diffSeconds) >= seconds) {
+            return rtf.format(Math.round(diffSeconds / seconds), unit);
+          }
+        }
+        return rtf.format(Math.round(diffSeconds), 'second');
+      }
+      function render() {
+        var cells = document.querySelectorAll('.updated[data-utc]');
+        for (var i = 0; i < cells.length; i++) {
+          var raw = cells[i].getAttribute('data-utc').replace(' ', 'T');
+          var date = new Date(/Tdd:dd:dd/.test(raw) ? raw + 'Z' : raw + ':00Z');
+          if (isNaN(date.getTime())) continue;
+          cells[i].textContent = ago(date);
+          cells[i].title = date.toLocaleString();
+        }
+      }
+      render();
+    })();
+  </script>
 </body>
 </html>
