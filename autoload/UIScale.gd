@@ -161,19 +161,18 @@ func _recompute() -> void:
 	# borders) stay on the true dpr so the layout does not overflow and thin borders stay crisp.
 	# Off touch web every boost is 1.0, so the look on desktop and native is unchanged.
 	var boost := _is_touch_web()
-	# the canvas_items stretch fits the 1920x1080 base to the window, and that fit factor is smaller
-	# in portrait than landscape, so the same font reads smaller in portrait (the start screen and
-	# rotation gate, seen in portrait, came out tiny). comp cancels that, enlarging when the fit is
-	# below 1 (portrait, small windows) and leaving landscape and large windows alone.
 	var win := Vector2(DisplayServer.window_get_size())
 	var fit := minf(win.x / 1920.0, win.y / 1080.0) if win.x > 0.0 and win.y > 0.0 else 1.0
-	# partial compensation (clamp floor 0.75, so at most ~1.33x): enough to lift portrait well above
-	# its old shrunk size, but not so far that the two side by side story cards overflow their text.
-	# Touch web only, so a small desktop browser window is not unexpectedly enlarged.
-	var comp := (1.0 / clampf(fit, 0.75, 1.0)) if boost else 1.0
-	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0) * comp     # general HUD, start screen, gate, chips
-	var ui_title := dpr * (TITLE_BOOST if boost else 1.0) * comp   # the big act and end title cards
-	var ui_cap := dpr * (CAPTION_BOOST if boost else 1.0)         # the narration caption (no comp: landscape only)
+	# full compensation, both directions: the fit factor is below 1 in portrait and above 1 in
+	# landscape, so the same font reads small in portrait and big in landscape. Dividing by it makes
+	# the perceived size the same in either orientation. Applied to the start screen, gate, title
+	# cards and caption (seen across orientations), not the HUD chrome (only seen in landscape, and
+	# already the right size). Touch web only, so desktop and native are untouched.
+	var comp := (1.0 / clampf(fit, 0.45, 1.6)) if boost else 1.0
+	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0)           # HUD chrome: chips, scene tag, tap note
+	var ui_s := ui * comp                                        # start screen and gate, orientation consistent
+	var ui_title := dpr * (TITLE_BOOST if boost else 1.0) * comp  # the big act and end title cards
+	var ui_cap := dpr * (CAPTION_BOOST if boost else 1.0) * comp  # the narration caption
 	var vw := vp.x / dpr
 	var vh := vp.y / dpr
 	var ar := vw / maxf(vh, 1.0)
@@ -196,21 +195,19 @@ func _recompute() -> void:
 	# produce physical-pixel results, so only the constant bounds need multiplying.
 	vmin = minf(cw, ch) * dpr
 
-	# font sizes: clamp(min_css * ui, factor * vmin, max_css * ui). The ui boost lifts the small
-	# end of the range on phones, which is where the HUD lands on a 1080 tall content area.
-	# the wordmark rides the general scale (not the bigger title scale), so the start screen reads a
-	# touch smaller; it is still the largest element on the screen via its big base size
-	fs_title = _clamp_i(roundi(54 * ui), vmin * 0.14, roundi(130 * ui))
-	fs_sub = _clamp_i(roundi(15 * ui), vmin * 0.03, roundi(22 * ui))
-	fs_body = _clamp_i(roundi(14 * ui), vmin * 0.024, roundi(19 * ui))
-	fs_menu = _clamp_i(roundi(13 * ui), vmin * 0.022, roundi(15 * ui))
+	# font sizes: clamp(min_css * scale, factor * vmin, max_css * scale). Start screen and gate use
+	# ui_s (orientation compensated); the HUD chrome uses ui (kept as is); the caption uses ui_cap.
+	fs_title = _clamp_i(roundi(54 * ui_s), vmin * 0.14, roundi(130 * ui_s))
+	fs_sub = _clamp_i(roundi(15 * ui_s), vmin * 0.03, roundi(22 * ui_s))
+	fs_body = _clamp_i(roundi(14 * ui_s), vmin * 0.024, roundi(19 * ui_s))
+	fs_menu = _clamp_i(roundi(13 * ui_s), vmin * 0.022, roundi(15 * ui_s))
 	# the caption was reading too large, so its bounds are about half the others
 	fs_caption = _clamp_i(roundi(7 * ui_cap), vmin * 0.012, roundi(9 * ui_cap))
 	fs_label = _clamp_i(roundi(11 * ui), vmin * 0.02, roundi(14 * ui))
 	fs_hud = _clamp_i(roundi(10 * ui), vmin * 0.02, roundi(13 * ui))
 	fs_icon = _clamp_i(roundi(14 * ui), vmin * 0.03, roundi(18 * ui))
 	fs_note = _clamp_i(roundi(8 * ui), vmin * 0.016, roundi(11 * ui))
-	fs_tagline = _clamp_i(roundi(12 * ui), vmin * 0.02, roundi(15 * ui))
+	fs_tagline = _clamp_i(roundi(12 * ui_s), vmin * 0.02, roundi(15 * ui_s))
 
 	# the chip touch target scales with ui so it stays comfortable to tap on a phone
 	hud_cell = _clamp_i(roundi(34 * ui), vmin * 0.06, roundi(52 * ui))
@@ -220,14 +217,14 @@ func _recompute() -> void:
 	fs_card = maxi(roundi(24 * ui_title), roundi(mn * 0.07 * (ui_title / dpr)))
 	fs_end = maxi(roundi(30 * ui_title), roundi(mn * 0.085 * (ui_title / dpr)))
 
-	# widths stay on dpr (content relative, must not overflow); paddings scale with ui (touch)
-	card_min_w = clampf(cw * dpr * 0.16, 200 * dpr, 340 * dpr)
-	enter_pad_h = clampf(vmin * 0.06, 36 * ui, 64 * ui)
-	enter_pad_v = clampf(vmin * 0.022, 14 * ui, 22 * ui)
-	card_pad_h = clampf(vmin * 0.04, 20 * ui, 32 * ui)
-	card_pad_v = clampf(vmin * 0.026, 14 * ui, 20 * ui)
-	gate_pad_h = clampf(vmin * 0.03, 16 * ui, 30 * ui)
-	gate_pad_v = clampf(vmin * 0.018, 12 * ui, 18 * ui)
+	# the card width follows the same compensation as its text, so the tagline fits without breaking
+	card_min_w = clampf(cw * dpr * 0.16, 200 * dpr, 340 * dpr) * comp
+	enter_pad_h = clampf(vmin * 0.06, 36 * ui_s, 64 * ui_s)
+	enter_pad_v = clampf(vmin * 0.022, 14 * ui_s, 22 * ui_s)
+	card_pad_h = clampf(vmin * 0.04, 20 * ui_s, 32 * ui_s)
+	card_pad_v = clampf(vmin * 0.026, 14 * ui_s, 20 * ui_s)
+	gate_pad_h = clampf(vmin * 0.03, 16 * ui_s, 30 * ui_s)
+	gate_pad_v = clampf(vmin * 0.018, 12 * ui_s, 18 * ui_s)
 	spacer = clampf(vmin * 0.022, 10 * dpr, 30 * dpr)
 	vbox_sep = _clamp_i(roundi(8 * dpr), vmin * 0.014, roundi(18 * dpr))
 	tales_gap = _clamp_i(roundi(12 * dpr), vmin * 0.02, roundi(18 * dpr))

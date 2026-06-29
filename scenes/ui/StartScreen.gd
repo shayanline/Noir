@@ -23,7 +23,7 @@ const _TAG_CUR := Color(0.918, 0.353, 0.353, 1)
 @onready var _subtitle: Label = $Center/VBox/Subtitle
 @onready var _blurb: Label = $Center/VBox/Blurb
 @onready var _heading: Label = $Center/VBox/Heading
-@onready var _tales: HBoxContainer = $Center/VBox/Tales
+@onready var _tales: BoxContainer = $Center/VBox/Tales
 @onready var _enter: Button = $Center/VBox/Enter
 @onready var _vbox: VBoxContainer = $Center/VBox
 @onready var _spacer1: Control = $Center/VBox/Spacer1
@@ -166,6 +166,9 @@ func _rescale() -> void:
 	_enter.add_theme_font_size_override("font_size", UIScale.fs_sub)
 	_vbox.add_theme_constant_override("separation", UIScale.vbox_sep)
 	_tales.add_theme_constant_override("separation", UIScale.tales_gap)
+	# stack the story cards in portrait (a narrow phone held upright), sit them in a row otherwise,
+	# so the bigger portrait text never has to cram two cards across a narrow screen
+	_tales.vertical = get_viewport_rect().size.y > get_viewport_rect().size.x
 	_spacer1.custom_minimum_size.y = UIScale.spacer
 	_spacer2.custom_minimum_size.y = UIScale.spacer
 	# enter button padding. Duplicate from the theme base (not the resolved stylebox, which is our
