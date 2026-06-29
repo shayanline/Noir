@@ -4,5 +4,11 @@
     "url": "https://shayanline.github.io/Inkfall/",
     "sha": "979162a",
     "updated": "2026-06-28 23:34"
+  },
+  {
+    "branch": "copilot/fix-small-text-and-huds",
+    "url": "https://shayanline.github.io/Inkfall/copilot-fix-small-text-and-huds/",
+    "sha": "8ad7da5",
+    "updated": "2026-06-29 11:00"
   }
 ]
