@@ -1,31 +1,27 @@
 name: Branch previews
 
-# Exports the Godot project for web and publishes every branch as a static
-# preview on the gh-pages branch:
-#   master          -> site root            (https://<owner>.github.io/Inkfall/)
+# Builds a web preview for every branch and publishes it on the gh-pages branch:
+#   master           -> site root             (https://<owner>.github.io/Inkfall/)
 #   any other branch -> /<branch-with-slashes-as-dashes>/  subfolder
-# Deleting a branch removes its preview folder.
+# Deleting a branch removes its folder.
 #
-# The push event runs the copy of this workflow that lives on the pushed
-# branch, so a branch only gets a preview once it contains this file.
-# Branches cut from master after this lands inherit it automatically.
+# The live dashboard is a generated page at /_dashboard/ on gh-pages, rebuilt
+# from the deployed folders and the open pull requests on every change. The
+# README links to it, so the preview index never commits to a source branch.
 #
-# The delete event always runs the workflow from the default branch, so this
-# file must live on the default branch for cleanup to fire.
+# Status: a push first marks the branch "building", then "deployed" once the
+# export publishes, or "failed" if it does not. The dashboard refreshes itself.
 #
-# The pull_request event (opened, reopened, closed) does not build or publish a
-# preview. It only refreshes the PR column in the index, so a preview row links
-# its open pull request as soon as one exists and drops the link once it closes.
+# Concurrency and safety:
+#   - Builds use a per branch concurrency group, so different branches build in
+#     parallel and never cancel each other. Pushing many branches at once cannot
+#     drop a preview. Re-pushing the same branch cancels only its own stale run.
+#   - All gh-pages writes go through tools/ci/ghpages.sh, which touches only the
+#     branch's own folder and re-clones and replays on a rejected push, so
+#     parallel deploys converge without losing a folder or a row.
 #
-# Loop prevention (defence in depth, any one layer is enough):
-#   1. All pushes use the automatic GITHUB_TOKEN, and GitHub does not start
-#      new runs from GITHUB_TOKEN pushes.
-#   2. The push trigger ignores the gh-pages branch.
-#   3. Every commit carries [skip ci].
-#   4. The publish job refuses to run for commits authored by the bot.
-#   5. The pull_request trigger fires only on opened, reopened and closed, not
-#      on the bot's push to the default branch, so the index cannot retrigger
-#      itself.
+# Loop prevention: every gh-pages commit carries [skip ci], and the push trigger
+# ignores gh-pages, so a deploy never retriggers the workflow.
 
 on:
   push:
@@ -43,21 +39,32 @@ permissions:
   contents: write
   pull-requests: read
 
-# Serialise writes to gh-pages so parallel branch pushes do not collide.
-concurrency:
-  group: gh-pages-deploy
-  cancel-in-progress: false
-
 jobs:
-  publish:
+  build:
     if: >-
       github.event_name == 'push' &&
-      !contains(github.event.head_commit.message, '[skip ci]') &&
-      github.event.head_commit.author.name != 'github-actions[bot]'
+      !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-24.04
+    # Per branch group: branches build in parallel, a branch cancels only its
+    # own superseded run.
+    concurrency:
+      group: preview-build-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout pushed branch
         uses: actions/checkout@v4
+
+      - name: Compute base URL
+        id: meta
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "base=https://${owner}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - name: Mark building
+        run: bash tools/ci/ghpages.sh building "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
       - name: Install Godot and export templates
         run: |
@@ -79,108 +86,47 @@ jobs:
           mkdir -p build/web
           godot --headless --verbose --export-release "Web" build/web/index.html
 
-      - name: Compute target folder
-        id: target
-        run: |
-          branch="${GITHUB_REF_NAME}"
-          slug="${branch//\//-}"
-          if [ "$branch" = "master" ]; then
-            echo "dest=" >> "$GITHUB_OUTPUT"
-            echo "Publishing master to site root"
-          else
-            echo "dest=$slug" >> "$GITHUB_OUTPUT"
-            echo "Publishing $branch to /$slug/"
-          fi
+      - name: Mark deployed
+        run: bash tools/ci/ghpages.sh deployed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./build/web
-          destination_dir: ${{ steps.target.outputs.dest }}
-          keep_files: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'preview: ${{ github.ref_name }} (${{ github.sha }}) [skip ci]'
+      - name: Mark failed
+        if: failure()
+        run: bash tools/ci/ghpages.sh failed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
   cleanup:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-
-      - name: Remove preview folder for deleted branch
-        run: |
-          branch="${{ github.event.ref }}"
-          slug="${branch//\//-}"
-          if [ -z "$slug" ] || [ "$slug" = "master" ]; then
-            echo "Refusing to delete the site root."
-            exit 0
-          fi
-          if [ -d "$slug" ]; then
-            git config user.name 'github-actions[bot]'
-            git config user.email 'github-actions[bot]@users.noreply.github.com'
-            git rm -rf -- "$slug"
-            git commit -m "cleanup: remove preview for deleted branch $branch [skip ci]"
-            git push origin gh-pages
-          else
-            echo "No preview folder '$slug' to remove."
-          fi
-
-  # Keep the live preview index in the default branch README in sync. Runs
-  # after a publish or a cleanup, and on a pull_request open, reopen or close to
-  # refresh the PR links. The commit carries [skip ci] so it never loops.
-  index:
-    needs: [publish, cleanup]
-    if: >-
-      ${{ always() && (
-        needs.publish.result == 'success' ||
-        needs.cleanup.result == 'success' ||
-        (github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository)
-      ) }}
-    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
-          fetch-depth: 0
 
-      - name: Update preview index
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Remove preview folder for deleted branch
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          repo="${{ github.event.repository.name }}"
-          base="https://${owner}.github.io/${repo}/"
-          manifest=".github/previews.json"
-          case "${{ github.event_name }}" in
-            delete)
-              branch="${{ github.event.ref }}"
-              node .github/scripts/preview-index.mjs remove "$manifest" "$branch"
-              ;;
-            push)
-              branch="${GITHUB_REF_NAME}"
-              slug="${branch//\//-}"
-              if [ "$branch" = "master" ]; then url="$base"; else url="${base}${slug}/"; fi
-              node .github/scripts/preview-index.mjs upsert "$manifest" "$branch" "$url" "${GITHUB_SHA:0:7}" "$(date -u '+%Y-%m-%d %H:%M')"
-              ;;
-          esac
-          # Refresh the open PR link on every row, then render the table.
-          node .github/scripts/preview-index.mjs sync-prs "$manifest"
-          node .github/scripts/preview-index.mjs render "$manifest" README.md
-          if git diff --quiet; then
-            echo "Index already up to date."
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add "$manifest" README.md
-          git commit -m "docs: update live preview index [skip ci]"
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+          base="https://${owner}.github.io/${{ github.event.repository.name }}/"
+          bash tools/ci/ghpages.sh remove "${{ github.event.ref }}" removed "$base"
+
+  pr_refresh:
+    # Refresh the dashboard PR links when a same repo pull request opens,
+    # reopens or closes. No build, just a re-render.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Re-render dashboard
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          base="https://${owner}.github.io/${{ github.event.repository.name }}/"
+          bash tools/ci/ghpages.sh refresh "${{ github.event.pull_request.head.ref }}" "${{ github.event.pull_request.head.sha }}" "$base"
