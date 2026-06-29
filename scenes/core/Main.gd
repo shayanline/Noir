@@ -358,100 +358,51 @@ func _on_poster_requested() -> void:
 		return
 	_hud.visible = false
 	await RenderingServer.frame_post_draw
-	var frame := get_viewport().get_texture().get_image()
+	# crop the grab to the scene the viewer sees (the board area), dropping any letterbox bars, so
+	# the poster shows the live frame, not the screen, and reads the same whatever the device shape
+	var frame := _crop_to_scene(get_viewport().get_texture().get_image())
 	_hud.visible = true
-	# the modal shows the clean pulled frame, SAVE writes the composed poster
-	var frame_tex := ImageTexture.create_from_image(frame)
-	var save_img := await _compose_poster(frame)
-	_hud.show_poster(frame_tex, save_img)
+	# preview exactly what gets saved: the composed poster, watermark and narration baked in
+	var poster := await _compose_poster(frame)
+	_hud.show_poster(ImageTexture.create_from_image(poster), poster)
 
 
-## compose a downloadable noir poster from the captured frame: an inked white border, the INKFALL
-## wordmark, the current caption as the tagline, and a footer. Built in a SubViewport so it uses the
-## shared fonts and renders to a saveable image.
+## Crop a full viewport grab down to the staged scene (UIScale.content_rect), so the poster carries
+## the board the viewer is looking at and never the letterbox bars around it.
+func _crop_to_scene(shot: Image) -> Image:
+	var r := UIScale.content_rect
+	var full := Rect2i(Vector2i.ZERO, shot.get_size())
+	# floor the start and ceil the end so a fractional dpr content rect is fully contained, rather
+	# than truncating and leaving a 1px letterbox bar or shaving a pixel off the scene
+	var pos := Vector2i(floori(r.position.x), floori(r.position.y))
+	var region := Rect2i(pos, Vector2i(ceili(r.end.x), ceili(r.end.y)) - pos).intersection(full)
+	if region.has_area() and region != full:
+		return shot.get_region(region)
+	return shot
+
+
+## Compose the downloadable poster from the captured scene, a faithful port of the legacy
+## makePoster: the whole scene framed by an inked border with red splatter corners, the INKFALL
+## wordmark, the narration tagline and a halftone wash. Rendered in a SubViewport whose
+## height follows the scene aspect, so the full scene shows and the output is a consistent 900px wide.
 func _compose_poster(frame: Image) -> Image:
-	var pw := 900
-	var margin := 56
-	var fw := pw - margin * 2
-	var vp := get_viewport_rect().size
-	var fh := int(fw * vp.y / vp.x)
-	var fy := 190
-	var ph := fy + fh + 160
+	var canvas := PosterCanvas.new()
+	canvas.scene_tex = ImageTexture.create_from_image(frame)
+	canvas.tagline = _poster_tagline()
+	var ps := canvas.poster_size()
+	canvas.size = ps
 
 	var sv := SubViewport.new()
-	sv.size = Vector2i(pw, ph)
+	sv.size = ps
 	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(sv)
-
-	var root := Control.new()
-	root.size = Vector2(pw, ph)
-	sv.add_child(root)
-
-	var bg := ColorRect.new()
-	bg.color = Color.BLACK
-	bg.size = Vector2(pw, ph)
-	root.add_child(bg)
-
-	var title := HBoxContainer.new()
-	title.anchor_right = 1.0
-	title.offset_top = 56.0
-	title.alignment = BoxContainer.ALIGNMENT_CENTER
-	title.add_theme_constant_override("separation", 0)
-	root.add_child(title)
-	title.add_child(_poster_word("NO", Color(1, 1, 1, 1)))
-	title.add_child(_poster_word("IR", Color(0.882, 0, 0.063, 1)))
-
-	var pic := TextureRect.new()
-	pic.texture = ImageTexture.create_from_image(frame)
-	pic.position = Vector2(margin, fy)
-	pic.size = Vector2(fw, fh)
-	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	pic.clip_contents = true
-	root.add_child(pic)
-
-	var border := Panel.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0, 0, 0, 0)
-	sb.set_border_width_all(5)
-	sb.border_color = Color(1, 1, 1, 1)
-	border.add_theme_stylebox_override("panel", sb)
-	border.position = Vector2(margin, fy)
-	border.size = Vector2(fw, fh)
-	root.add_child(border)
-
-	var tag := Label.new()
-	tag.theme_type_variation = &"MenuRole"
-	tag.add_theme_font_size_override("font_size", 24)
-	tag.add_theme_color_override("font_color", Color(0.847, 0.831, 0.784, 1))
-	tag.position = Vector2(margin, fy + fh + 30)
-	tag.size = Vector2(fw, 0)
-	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tag.text = _poster_tagline()
-	root.add_child(tag)
-
-	var foot := Label.new()
-	foot.theme_type_variation = &"TapNote"
-	foot.add_theme_font_size_override("font_size", 13)
-	foot.position = Vector2(0, ph - 44)
-	foot.size = Vector2(pw, 0)
-	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	foot.text = "BASIN CITY  ·  INKFALL"
-	root.add_child(foot)
+	sv.add_child(canvas)
+	canvas.queue_redraw()
 
 	await RenderingServer.frame_post_draw
 	var img := sv.get_texture().get_image()
 	sv.queue_free()
 	return img
-
-
-func _poster_word(text: String, col: Color) -> Label:
-	var lbl := Label.new()
-	lbl.theme_type_variation = &"Title"
-	lbl.add_theme_font_size_override("font_size", 80)
-	lbl.add_theme_color_override("font_color", col)
-	lbl.text = text
-	return lbl
 
 
 func _poster_tagline() -> String:

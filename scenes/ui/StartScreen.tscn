@@ -54,6 +54,7 @@ text = "FALL"
 layout_mode = 2
 theme_type_variation = &"Subtitle"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Blurb" type="Label" parent="Center/VBox"]
 layout_mode = 2
@@ -71,7 +72,7 @@ theme_type_variation = &"Heading"
 text = "CHOOSE YOUR TALE"
 horizontal_alignment = 1
 
-[node name="Tales" type="HBoxContainer" parent="Center/VBox"]
+[node name="Tales" type="BoxContainer" parent="Center/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 18
 alignment = 1

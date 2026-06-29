@@ -38,23 +38,26 @@ func _draw() -> void:
 
 	var cx := size.x * 0.5
 	var cy := size.y * 0.5
+	# scale the fixed 58x102 phone up to fill the control, so it tracks the responsive icon size
+	# (the rotated phone spans its diagonal, so fit that within the smaller side)
+	var s := minf(size.x, size.y) / Vector2(PHONE_W, PHONE_H).length()
 
-	# Build the phone outline as a single polyline, then rotate it.
+	# Build the phone outline as a single polyline, then scale and rotate it.
 	var pts := _rounded_rect_points(-PHONE_W * 0.5, -PHONE_H * 0.5, PHONE_W, PHONE_H, RADIUS)
 
-	# Rotate every point around the origin, then translate to centre.
+	# Scale around the origin, rotate, then translate to centre.
 	var xf := Transform2D(angle, Vector2(cx, cy))
 	var rotated: PackedVector2Array = []
 	rotated.resize(pts.size())
 	for i in pts.size():
-		rotated[i] = xf * pts[i]
+		rotated[i] = xf * (pts[i] * s)
 
-	draw_polyline(rotated, FG, BORDER, true)
+	draw_polyline(rotated, FG, BORDER * s, true)
 
 	# Camera circle at the bottom of the phone (before rotation: below centre).
-	var cam_local := Vector2(0.0, PHONE_H * 0.5 - CAM_CY)
+	var cam_local := Vector2(0.0, PHONE_H * 0.5 - CAM_CY) * s
 	var cam_world := xf * cam_local
-	_draw_circle_outline(cam_world, CAM_R, FG, 2.0)
+	_draw_circle_outline(cam_world, CAM_R * s, FG, 2.0 * s)
 
 
 func _rotation_angle(t: float) -> float:

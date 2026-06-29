@@ -124,6 +124,8 @@ func _show_overlay() -> void:
 	_msg_fs.visible = not no_fs
 	_msg_nofs.visible = no_fs
 	_btn_rotate.visible = not no_fs
+	# the visible message and buttons differ from layout time, so re-fit to the actual content
+	call_deferred("_fit_to_viewport")
 	if visible:
 		return
 	visible = true
@@ -190,14 +192,16 @@ func _rescale() -> void:
 	_msg_nofs.add_theme_font_size_override("font_size", UIScale.fs_body)
 	_btn_rotate.add_theme_font_size_override("font_size", UIScale.fs_menu)
 	_btn_skip.add_theme_font_size_override("font_size", UIScale.fs_menu)
-	# scale the phone icon proportionally
-	var icon_sz := clampf(UIScale.vmin * 0.12, 64, 118)
+	# scale the phone icon proportionally, with the same orientation compensation as the gate text.
+	# It reads as a heading next to the prompt, so it is sized larger than the legacy hint glyph.
+	var icon_sz := clampf(UIScale.vmin * 0.22, 130.0 * UIScale.dpr, 200.0 * UIScale.dpr) * UIScale.ui_comp
 	_phone_icon.custom_minimum_size = Vector2(icon_sz, icon_sz)
-	_vbox.add_theme_constant_override("separation", roundi(UIScale.vmin * 0.03))
-	# gate button padding
+	_vbox.add_theme_constant_override("separation", roundi(UIScale.vmin * 0.03 * UIScale.ui_comp))
+	# gate button padding. Duplicate from the theme base (not the resolved stylebox, which is our
+	# own override after the first pass) so the dpr scaled border width and corner radius stay current.
 	for btn in [_btn_rotate, _btn_skip]:
 		for state in ["normal", "hover", "pressed"]:
-			var sb: StyleBox = btn.get_theme_stylebox(state)
+			var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox(state, btn.theme_type_variation)
 			if sb is StyleBoxFlat:
 				var dup := sb.duplicate() as StyleBoxFlat
 				dup.content_margin_left = UIScale.gate_pad_h
@@ -205,3 +209,28 @@ func _rescale() -> void:
 				dup.content_margin_top = UIScale.gate_pad_v
 				dup.content_margin_bottom = UIScale.gate_pad_v
 				btn.add_theme_stylebox_override(state, dup)
+	# keep the prompt within the screen with a margin, so the buttons never touch the edges
+	call_deferred("_fit_to_viewport")
+
+
+## Scale the centered column to sit within the viewport with a margin on every side, so the text and
+## buttons keep clear of the screen edges and never overflow. Untouched when it already fits.
+const _FIT_MARGIN := 0.8
+var _fit_token := 0
+
+func _fit_to_viewport() -> void:
+	# coalesce rapid calls (mobile web fires size_changed often): only the latest fit applies
+	_fit_token += 1
+	var token := _fit_token
+	_vbox.pivot_offset = Vector2.ZERO
+	_vbox.scale = Vector2.ONE
+	await get_tree().process_frame
+	if token != _fit_token:
+		return
+	var needed := _vbox.size
+	if needed.x <= 0.0 or needed.y <= 0.0:
+		return
+	var s := minf(1.0, minf(size.x * _FIT_MARGIN / needed.x, size.y * _FIT_MARGIN / needed.y))
+	if s < 1.0:
+		_vbox.pivot_offset = needed * 0.5
+		_vbox.scale = Vector2(s, s)

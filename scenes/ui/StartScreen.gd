@@ -23,7 +23,7 @@ const _TAG_CUR := Color(0.918, 0.353, 0.353, 1)
 @onready var _subtitle: Label = $Center/VBox/Subtitle
 @onready var _blurb: Label = $Center/VBox/Blurb
 @onready var _heading: Label = $Center/VBox/Heading
-@onready var _tales: HBoxContainer = $Center/VBox/Tales
+@onready var _tales: BoxContainer = $Center/VBox/Tales
 @onready var _enter: Button = $Center/VBox/Enter
 @onready var _vbox: VBoxContainer = $Center/VBox
 @onready var _spacer1: Control = $Center/VBox/Spacer1
@@ -103,6 +103,9 @@ func _select(i: int) -> void:
 	_subtitle.text = s.subtitle
 	_blurb.text = s.blurb
 	_repaint_cards()
+	# stories have different length subtitles and blurbs, so re-fit the column to the new content,
+	# otherwise the taller story keeps the previous story's scale and overflows
+	call_deferred("_fit_to_viewport")
 
 
 ## track the hovered card. `only_if` clears the hover only when it still belongs to that card, so a
@@ -138,6 +141,22 @@ func _restyle(idx: int) -> void:
 		card.theme_type_variation = &"StoryCard"
 		name_lbl.add_theme_color_override("font_color", _NAME_DIM)
 		tag_lbl.add_theme_color_override("font_color", _TAG_DIM)
+	# the padding override below shadows the variation's panel, so re-sync it to the new variation,
+	# otherwise the selected (red) border would stick on whichever card was current at the last scale
+	_apply_card_padding(card)
+
+
+## Override the card's panel stylebox with the dpr scaled padding, duplicated from the theme base of
+## the card's current variation so the variation's border colour is preserved.
+func _apply_card_padding(card: PanelContainer) -> void:
+	var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", card.theme_type_variation)
+	if sb is StyleBoxFlat:
+		var dup := sb.duplicate() as StyleBoxFlat
+		dup.content_margin_left = UIScale.card_pad_h
+		dup.content_margin_right = UIScale.card_pad_h
+		dup.content_margin_top = UIScale.card_pad_v
+		dup.content_margin_bottom = UIScale.card_pad_v
+		card.add_theme_stylebox_override("panel", dup)
 
 
 ## Apply responsive font sizes from the UIScale autoload, mirroring the legacy CSS vmin system.
@@ -149,12 +168,19 @@ func _rescale() -> void:
 	_heading.add_theme_font_size_override("font_size", UIScale.fs_label)
 	_enter.add_theme_font_size_override("font_size", UIScale.fs_sub)
 	_vbox.add_theme_constant_override("separation", UIScale.vbox_sep)
+	# fix the column width to most of the screen so the subtitle and blurb wrap within it instead of
+	# a long story title stretching the column off the edges
+	_vbox.custom_minimum_size.x = get_viewport_rect().size.x * 0.9
 	_tales.add_theme_constant_override("separation", UIScale.tales_gap)
+	# stack the story cards in portrait (a narrow phone held upright), sit them in a row otherwise,
+	# so the bigger portrait text never has to cram two cards across a narrow screen
+	_tales.vertical = get_viewport_rect().size.y > get_viewport_rect().size.x
 	_spacer1.custom_minimum_size.y = UIScale.spacer
 	_spacer2.custom_minimum_size.y = UIScale.spacer
-	# enter button padding
+	# enter button padding. Duplicate from the theme base (not the resolved stylebox, which is our
+	# own override after the first pass) so the dpr scaled border width stays current.
 	for state in ["normal", "hover", "pressed"]:
-		var sb: StyleBox = _enter.get_theme_stylebox(state)
+		var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox(state, _enter.theme_type_variation)
 		if sb is StyleBoxFlat:
 			var dup := sb.duplicate() as StyleBoxFlat
 			dup.content_margin_left = UIScale.enter_pad_h
@@ -172,12 +198,32 @@ func _rescale() -> void:
 		tag_lbl.custom_minimum_size.x = UIScale.card_min_w
 		var inner_box: VBoxContainer = card.get_meta(&"inner_box")
 		inner_box.add_theme_constant_override("separation", UIScale.card_sep)
-		# scale the card padding to match the legacy clamp
-		var sb: StyleBox = card.get_theme_stylebox("panel")
-		if sb is StyleBoxFlat:
-			var dup := sb.duplicate() as StyleBoxFlat
-			dup.content_margin_left = UIScale.card_pad_h
-			dup.content_margin_right = UIScale.card_pad_h
-			dup.content_margin_top = UIScale.card_pad_v
-			dup.content_margin_bottom = UIScale.card_pad_v
-			card.add_theme_stylebox_override("panel", dup)
+		_apply_card_padding(card)
+	# the bigger phone sizes can make this dense column overflow a short landscape phone, so shrink
+	# it to fit within a margin once the new sizes have settled. It stays centered and never clips.
+	call_deferred("_fit_to_viewport")
+
+
+## Scale the centered column to sit within the viewport with a margin on every side, so on a short
+## landscape phone the ENTER button is not jammed against the bottom and nothing touches the side
+## edges. When it already fits within that margin the scale is 1 and the layout is untouched.
+const _FIT_MARGIN := 0.9   # leave ~10% on each axis as breathing room from the screen edges
+var _fit_token := 0
+
+func _fit_to_viewport() -> void:
+	# coalesce rapid calls (mobile web fires size_changed often): only the latest scheduled fit, the
+	# one whose token still matches after the awaited frame, gets to apply a scale
+	_fit_token += 1
+	var token := _fit_token
+	_vbox.pivot_offset = Vector2.ZERO
+	_vbox.scale = Vector2.ONE
+	await get_tree().process_frame
+	if token != _fit_token:
+		return
+	var needed := _vbox.size
+	if needed.x <= 0.0 or needed.y <= 0.0:
+		return
+	var s := minf(1.0, minf(size.x * _FIT_MARGIN / needed.x, size.y * _FIT_MARGIN / needed.y))
+	if s < 1.0:
+		_vbox.pivot_offset = needed * 0.5
+		_vbox.scale = Vector2(s, s)

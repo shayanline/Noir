@@ -10,6 +10,8 @@ signal exit_requested
 signal poster_requested
 signal pause_changed(paused: bool)
 
+const _ELITE := preload("res://fonts/SpecialElite.ttf")   # the typewriter font, for the scene tag tracking
+
 const _BONE := Color(0.847, 0.831, 0.784, 1)
 const _WHITE := Color(1, 1, 1, 1)
 const _LINE := Color(0.863, 0.847, 0.784, 0.16)
@@ -24,6 +26,7 @@ const _CAP_OUT := 0.46                 # narration torn wipe out (s)
 const _CAP_VARIANTS := 3
 
 var _tag: Label
+var _tag_font: FontVariation
 var _caption: PanelContainer
 var _caption_label: RichTextLabel
 var _cap_vp: SubViewport
@@ -44,7 +47,6 @@ var _menu_views := {}
 var _sound_btn: Button
 var _poster: Control
 var _poster_img: TextureRect
-var _poster_cap: Label
 var _poster_save: Button
 
 var _titles: Array = []
@@ -114,7 +116,10 @@ func _build_caption() -> void:
 	_cap_vp.add_child(_caption)
 	_caption_label = RichTextLabel.new()
 	_caption_label.bbcode_enabled = true
-	_caption_label.fit_content = true
+	# fit_content is off on purpose: with it on, RichTextLabel ignores the width cap and lays a long
+	# line out in one row (running off the screen). Instead the width is pinned and the size is set
+	# from the measured wrapped content in _hug_caption.
+	_caption_label.fit_content = false
 	_caption_label.scroll_active = false
 	_caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_caption_label.custom_minimum_size = Vector2(560, 0)
@@ -130,6 +135,10 @@ func _build_caption() -> void:
 	_cap_tex.texture = _cap_vp.get_texture()
 	_cap_tex.material = _cap_mat
 	_cap_tex.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	# ignore the texture's own size (it is rendered at 2x for crispness): present it at the logical
+	# size below, otherwise the rect grows to the 2x backing and the caption runs off the screen
+	_cap_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cap_tex.stretch_mode = TextureRect.STRETCH_SCALE
 	_cap_tex.custom_minimum_size = Vector2(_CAP_VP)
 	_cap_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cap_tex.anchor_left = 0.5
@@ -364,20 +373,19 @@ func _menu_item(text: String, variation: StringName, on_press: Callable) -> Butt
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(on_press)
-	# the red diamond markers from the legacy: always lit on the primary action, lit on hover otherwise
-	var rest := 1.0 if variation == &"MenuItemPrimary" else 0.0
+	# the red diamond markers only appear on the hovered item, never at rest
 	var dl := _menu_dot(0.08)
 	var dr := _menu_dot(0.92)
 	b.add_child(dl)
 	b.add_child(dr)
-	dl.modulate.a = rest
-	dr.modulate.a = rest
+	dl.modulate.a = 0.0
+	dr.modulate.a = 0.0
 	b.mouse_entered.connect(func():
 		dl.modulate.a = 1.0
 		dr.modulate.a = 1.0)
 	b.mouse_exited.connect(func():
-		dl.modulate.a = rest
-		dr.modulate.a = rest)
+		dl.modulate.a = 0.0
+		dr.modulate.a = 0.0)
 	return b
 
 
@@ -455,37 +463,28 @@ func _build_poster() -> void:
 	panel.theme_type_variation = &"MenuPanel"
 	pad.add_child(panel)
 
+	# the poster preview is the hero: it already carries the INKFALL wordmark and the narration, so
+	# the modal adds no title or caption of its own, just the image and the save and close actions
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 16)
 	panel.add_child(col)
-	col.add_child(_menu_title("POSTER"))
 
-	# the pulled frame, matted in a crisp bordered frame
-	var mat := PanelContainer.new()
-	mat.theme_type_variation = &"PosterFrame"
-	mat.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	col.add_child(mat)
+	# the composed poster already carries its own inked frame, so the modal shows it directly with
+	# no extra matte (that was a border within a border)
 	_poster_img = TextureRect.new()
 	_poster_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_poster_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	mat.add_child(_poster_img)
-
-	_poster_cap = Label.new()
-	_poster_cap.theme_type_variation = &"MenuNote"
-	_poster_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_poster_cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_poster_cap)
-
-	col.add_child(_sep())
+	_poster_img.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(_poster_img)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
 	col.add_child(row)
-	_poster_save = _menu_item("SAVE", &"MenuItemPrimary", _save_poster)
+	_poster_save = _menu_item("SAVE POSTER", &"MenuItemPrimary", _save_poster)
 	row.add_child(_poster_save)
-	row.add_child(_menu_item("BACK TO THE RAIN", &"MenuItem", _close_poster))
+	row.add_child(_menu_item("CANCEL", &"MenuItem", _close_poster))
 
 
 # --- public API ----------------------------------------------------------
@@ -545,9 +544,26 @@ func show_caption(text: String) -> void:
 
 
 func _apply_caption(bb: String, variant: int, seed: float) -> void:
+	# pin to the wrap width so the text wraps, then _hug_caption sizes the box to the wrapped content
+	_caption_label.custom_minimum_size = Vector2(UIScale.caption_max_w, 0)
+	_caption_label.custom_maximum_size.x = UIScale.caption_max_w
 	_caption_label.text = bb
 	_cap_mat.set_shader_parameter("variant", variant)
 	_cap_mat.set_shader_parameter("seed", seed)
+	call_deferred("_hug_caption")
+
+
+## Size the caption box to the measured wrapped content: the width hugs the longest line (within the
+## min and max) and the height fits all the lines, so a short line sits in a tight card while a long
+## line wraps at the max width instead of running off the screen.
+func _hug_caption() -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(_caption_label):
+		return
+	var w := clampf(_caption_label.get_content_width(), UIScale.caption_min_w, UIScale.caption_max_w)
+	var h := _caption_label.get_content_height()
+	_caption_label.custom_minimum_size = Vector2(w, h)
+	_caption_label.custom_maximum_size.x = w
 
 
 func _set_cap_reveal(v: float) -> void:
@@ -558,7 +574,9 @@ func _process(_delta: float) -> void:
 	# feed the panel's live bounds (UV within the render target) to the reveal shader, so the torn
 	# sweep crosses the visible caption over its full duration rather than racing across empty margins
 	if _cap_shown and _caption and _cap_mat:
-		var vp := Vector2(_CAP_VP)
+		# normalize against the live override size, not the _CAP_VP constant: cap_w grows past 1200 on
+		# high dpr, and using the wrong width misaligns the torn reveal sweep
+		var vp := Vector2(_cap_vp.size_2d_override)
 		var p := _caption.position
 		var s := _caption.size
 		_cap_mat.set_shader_parameter("cap_rect",
@@ -593,26 +611,20 @@ func resume_from_end() -> void:
 		set_tap_visible(true)
 
 
-## tex is the clean pulled frame shown in the modal, image is the composed poster written on SAVE.
+## tex and image are the same composed poster: tex previews it, image is written on SAVE. The
+## preview fills most of the screen so the viewer can judge it before saving, then leaves room for
+## the save and close row.
 func show_poster(tex: Texture2D, image: Image) -> void:
 	_poster_image = image
 	_poster_img.texture = tex
 	var ts := tex.get_size()
-	var h := 420.0
+	var vp := get_viewport_rect().size
+	var h := clampf(minf(vp.x * 0.6, vp.y * 0.6), 280.0, 900.0)
 	_poster_img.custom_minimum_size = Vector2(h * ts.x / maxf(ts.y, 1.0), h)
-	_poster_cap.text = _poster_caption()
-	_poster_save.text = "SAVE"
+	_poster_save.text = "SAVE POSTER"
 	_poster_save.disabled = false
 	_poster.visible = true
 	pause_changed.emit(true)
-
-
-func _poster_caption() -> String:
-	var line := GameState.current_line()
-	var s := line.text if line else ""
-	if s == "" and GameState.story:
-		s = GameState.story.subtitle
-	return s.replace("<b>", "").replace("</b>", "")
 
 
 # --- act picker ----------------------------------------------------------
@@ -639,13 +651,17 @@ func _repaint_nav() -> void:
 func _populate(container: Container, is_drop: bool) -> void:
 	for c in container.get_children():
 		c.queue_free()
+	# size and font scale with the device pixel ratio, like the rest of the HUD
+	var cell := float(UIScale.hud_cell)
+	var gap := roundi(UIScale.gap)
 	for i in _titles.size():
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.text = String(_titles[i]).strip_edges()
+		b.add_theme_font_size_override("font_size", UIScale.fs_hud)
 		if is_drop:
 			b.theme_type_variation = &"NavDrop"
-			b.custom_minimum_size = Vector2(_CELL * 3 + _GAP * 2, _CELL)
+			b.custom_minimum_size = Vector2(cell * 3 + gap * 2, cell)
 			if i == _cur_act:
 				b.add_theme_color_override("font_color", _WHITE)
 		else:
@@ -739,16 +755,39 @@ func _on_line_changed(_idx: int) -> void:
 ## Apply responsive sizes from UIScale, mirroring the legacy CSS vmin system.
 func _rescale() -> void:
 	var cell := float(UIScale.hud_cell)
-	# scene tag
+	# round the gap once and use the same integer for both the container separation and the width
+	# reservation, so the reserved width matches the laid out width and never clips by a pixel
+	var gap := roundi(UIScale.gap)
+	var edg := UIScale.edge
+	# scene tag position
+	_tag.position = Vector2(edg, edg)
 	_tag.add_theme_font_size_override("font_size", UIScale.fs_label)
-	# caption
+	# the scene tag carries the legacy's wide 0.25em tracking, proportional to its size. The
+	# FontVariation is created once and only its spacing is updated, to avoid per resize allocations.
+	if _tag_font == null:
+		_tag_font = FontVariation.new()
+		_tag_font.base_font = _ELITE
+		_tag.add_theme_font_override("font", _tag_font)
+	_tag_font.spacing_glyph = roundi(UIScale.fs_label * 0.25)
+	# caption: resize the SubViewport to match caption_max_w so text is never clipped on HiDPI.
+	# supersample 2x only at low dpr, since a HiDPI canvas is already crisp, to save render target memory
+	var cap_w := maxi(roundi(UIScale.caption_max_w), _CAP_VP.x)
+	var cap_ss := 1 if UIScale.dpr >= 2.0 else 2
+	_cap_vp.size = Vector2i(cap_w, _CAP_VP.y) * cap_ss
+	_cap_vp.size_2d_override = Vector2i(cap_w, _CAP_VP.y)
+	_cap_tex.custom_minimum_size = Vector2(cap_w, _CAP_VP.y)
 	_caption_label.add_theme_font_size_override("normal_font_size", UIScale.fs_caption)
 	_caption_label.add_theme_font_size_override("bold_font_size", UIScale.fs_caption)
-	_caption_label.custom_minimum_size.x = UIScale.caption_min_w
+	# pin to the wrap width, then re-hug to the content so the box fits the new size without overflow
+	_caption_label.custom_minimum_size.x = UIScale.caption_max_w
 	_caption_label.custom_maximum_size.x = UIScale.caption_max_w
+	if _cap_shown:
+		call_deferred("_hug_caption")
 	_cap_tex.offset_bottom = -UIScale.caption_bottom
-	# scale the caption panel padding to match the legacy clamp
-	var cap_sb: StyleBox = _caption.get_theme_stylebox("panel")
+	# scale the caption panel padding to match the legacy clamp. Duplicate from the theme base (not
+	# the resolved stylebox, which is our own override after the first pass) so the border width,
+	# scaled by UIScale, stays current.
+	var cap_sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", "CaptionPanel")
 	if cap_sb is StyleBoxFlat:
 		var dup := cap_sb.duplicate() as StyleBoxFlat
 		dup.content_margin_left = UIScale.caption_pad_h
@@ -760,10 +799,24 @@ func _rescale() -> void:
 	_tap.add_theme_font_size_override("font_size", UIScale.fs_note)
 	_tap.offset_bottom = -UIScale.tap_bottom
 	_tap.offset_top = -UIScale.tap_bottom - 24
-	# top bar chips
+	# top bar: recompute offset_left from chip count so chips are never clipped
+	var chip_count := _chips.size()
+	_topbar.offset_right = -edg
+	_topbar.offset_top = edg
+	_topbar.offset_left = -(cell * chip_count + gap * (chip_count - 1) + edg)
+	_topbar.add_theme_constant_override("separation", gap)
 	for chip in _chips:
 		chip.custom_minimum_size = Vector2(cell, cell)
 		chip.add_theme_font_size_override("font_size", UIScale.fs_hud)
-	# review act button
-	_review_btn.custom_minimum_size = Vector2(cell * 3 + _GAP * 2, cell)
+	# review act column, button and the dropdown under it
+	_actsel_col.position = Vector2(edg, edg)
+	_actsel_col.add_theme_constant_override("separation", gap)
+	_review_btn.custom_minimum_size = Vector2(cell * 3 + gap * 2, cell)
 	_review_btn.add_theme_font_size_override("font_size", UIScale.fs_hud)
+	_navdrop.add_theme_constant_override("separation", gap)
+	# end of story act row
+	_end_box.offset_top = -UIScale.end_box_top
+	_end_box.offset_bottom = -UIScale.end_box_bottom
+	_end_row.add_theme_constant_override("separation", roundi(16.0 * UIScale.dpr))
+	# rebuild any visible act buttons so their size and font pick up the new scale
+	_repaint_nav()
