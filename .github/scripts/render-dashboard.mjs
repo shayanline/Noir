@@ -5,8 +5,8 @@
 //
 // It rebuilds the whole page from durable truth every time, so it never relies
 // on an incremental edit that a concurrent run could drop:
-//   - the deployed previews are the folders on gh-pages that carry a _meta.json
-//     (master sits at the root, every other branch in its own slug folder),
+//   - the deployed previews are the folders that carry a _meta.json (master at
+//     the root, every other branch under branches/<slug>/),
 //   - the open pull request per branch comes from the GitHub API.
 // The page is written to <gh-pages-root>/_dashboard/index.html. The only input
 // that is not on disk is the PR list, and a stale PR column self heals on the
@@ -32,17 +32,21 @@ const readMeta = (p) => {
   }
 };
 
-// A preview is any folder carrying a _meta.json, plus the root meta for master.
+// master's meta is at the root, every other branch lives under branches/<slug>/.
+// Reading only those two places means stray folders on gh-pages are ignored and
+// a branch can never inject a row from anywhere else.
 function collectMetas(dir) {
   const metas = [];
   const rootMeta = readMeta(join(dir, '_meta.json'));
   if (rootMeta) metas.push(rootMeta);
-  for (const name of readdirSync(dir)) {
-    if (name.startsWith('.') || name === '_dashboard') continue;
-    const sub = join(dir, name);
-    if (!statSync(sub).isDirectory()) continue;
-    const meta = readMeta(join(sub, '_meta.json'));
-    if (meta) metas.push(meta);
+  const branchesDir = join(dir, 'branches');
+  if (existsSync(branchesDir) && statSync(branchesDir).isDirectory()) {
+    for (const name of readdirSync(branchesDir)) {
+      const sub = join(branchesDir, name);
+      if (!statSync(sub).isDirectory()) continue;
+      const meta = readMeta(join(sub, '_meta.json'));
+      if (meta) metas.push(meta);
+    }
   }
   return metas;
 }

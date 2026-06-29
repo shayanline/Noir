@@ -2,8 +2,10 @@ name: Branch previews
 
 # Builds a web preview for every branch and publishes it on the gh-pages branch:
 #   master           -> site root             (https://<owner>.github.io/Inkfall/)
-#   any other branch -> /<branch-with-slashes-as-dashes>/  subfolder
-# Deleting a branch removes its folder.
+#   any other branch -> /branches/<slug>/     (slug = branch, slashes to dashes)
+# Deleting a branch removes its folder. Non master branches always live under
+# branches/, so a branch can never write over the root, the dashboard or
+# master's files. Branch names are validated before any write (see ghpages.sh).
 #
 # The live dashboard is a generated page at /_dashboard/ on gh-pages, rebuilt
 # from the deployed folders and the open pull requests on every change. The
@@ -56,6 +58,10 @@ jobs:
       - name: Checkout pushed branch
         uses: actions/checkout@v4
 
+      - name: Validate branch name
+        id: validate
+        run: bash tools/ci/ghpages.sh check "${GITHUB_REF_NAME}" na na
+
       - name: Compute base URL
         id: meta
         run: |
@@ -90,7 +96,8 @@ jobs:
         run: bash tools/ci/ghpages.sh deployed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
       - name: Mark failed
-        if: failure()
+        # Only after a valid name passed the gate, so an invalid name writes nothing.
+        if: failure() && steps.validate.outcome == 'success'
         run: bash tools/ci/ghpages.sh failed "${GITHUB_REF_NAME}" "${{ steps.meta.outputs.sha }}" "${{ steps.meta.outputs.base }}"
 
   cleanup:
