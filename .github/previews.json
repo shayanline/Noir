@@ -12,12 +12,6 @@
     "updated": "2026-06-29 14:24"
   },
   {
-    "branch": "fix/pause-menu-on-top",
-    "url": "https://shayanline.github.io/Inkfall/fix-pause-menu-on-top/",
-    "sha": "658a715",
-    "updated": "2026-06-29 14:14"
-  },
-  {
     "branch": "fix/web-render-lighting",
     "url": "https://shayanline.github.io/Inkfall/fix-web-render-lighting/",
     "sha": "48ce376",
