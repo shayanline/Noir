@@ -41,6 +41,7 @@ var _amb_vol := 0.4
 var _sfx_pool: Array[AudioStreamPlayer] = []
 var _sfx_next := 0
 var _loops := {}               # name -> AudioStreamPlayer held while active
+var _suspended := {}           # player -> playback position, only those playing when paused
 
 
 func _ready() -> void:
@@ -189,13 +190,30 @@ func is_on() -> bool:
 # --- pause + reset ------------------------------------------------------
 
 ## freeze or thaw every player so the pause menu is a true pause of sound, not just a duck.
+## On suspend we record the position of every player that is actually playing and freeze only those.
+## On resume we restart each from its stored position with play(pos), rather than clearing
+## stream_paused: the web audio driver restarts a stream from the start when stream_paused is cleared,
+## which made the music jump back to the beginning and replayed finished one-shots (a phantom whoosh).
 func set_suspended(s: bool) -> void:
-	for p in [_music, _rain, _amb]:
-		p.stream_paused = s
+	if s:
+		_suspended.clear()
+		for p in _players():
+			if p.playing:
+				_suspended[p] = p.get_playback_position()
+				p.stream_paused = true
+	else:
+		for p in _suspended:
+			p.stream_paused = false
+			p.play(_suspended[p])
+		_suspended.clear()
+
+
+func _players() -> Array[AudioStreamPlayer]:
+	var out: Array[AudioStreamPlayer] = [_music, _rain, _amb]
+	out.append_array(_sfx_pool)
 	for key in _loops:
-		_loops[key].stream_paused = s
-	for p in _sfx_pool:
-		p.stream_paused = s
+		out.append(_loops[key])
+	return out
 
 
 ## stop everything and return to the unstarted state, so leaving a story leaves no sound ringing.

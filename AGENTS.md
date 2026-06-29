@@ -6,7 +6,8 @@ is a board for staging noir stories, not a general purpose engine.
 
 The board is a real Godot scene tree: every placed object (a backdrop, a light, a cast member) is a
 node scene built from Polygon2D, Line2D, Sprite2D and Label, lit by native 2D lights (PointLight2D
-and DirectionalLight2D) over a global CanvasModulate wash, with WorldEnvironment bloom. The nodes
+and DirectionalLight2D) over a global CanvasModulate wash. The glow reads from the 2D lights, not a
+bloom pass. The nodes
 draw themselves and animate themselves with AnimationPlayer (and Tween for data driven motion), so
 there is no per frame repaint. The flow is signal driven, and the UI look comes from a shared Theme.
 
@@ -51,9 +52,9 @@ autoload/              globals (Transitions.tscn is also registered as an autolo
   Palette.gd             the fixed art direction (grayscale plus the colours that bleed) and timing
   AudioDirector.gd       looping beds (music, ambience, rain) crossfade, pooled duckable one shots
 scenes/
-  core/Main.*            the view controller. The global look (CanvasModulate wash, WorldEnvironment
-                         bloom via Environment.tres, post FX via post_material.tres, Camera2D) is
-                         authored in Main.tscn; the script only advances GameState and swaps the Board.
+  core/Main.*            the view controller. The global look (CanvasModulate wash, post FX via
+                         post_material.tres, Camera2D) is authored in Main.tscn; the script only
+                         advances GameState and swaps the Board.
   board/
     Board.gd               the act host: builds the backdrop, lights, cast and weather as nodes and
                            sets up the key and moon lights. Reacts to GameState.line_changed and
@@ -77,8 +78,14 @@ audio/ fonts/         sound and type
 ## Render model (how an act is staged)
 
 `Main` owns the global look, authored in `Main.tscn`: a CanvasModulate wash darkens the whole 2D
-canvas, a WorldEnvironment adds additive bloom (Environment.tres), and a post shader lays grain and a
-vignette over everything (post_material.tres). For each act it swaps in a `Board`.
+canvas and a post shader lays grain and a vignette over everything (post_material.tres). For each act
+it swaps in a `Board`.
+
+`hdr_2d` is off and the WorldEnvironment glow is disabled on purpose. With `hdr_2d` on, the editor
+and iOS (Forward Plus and Mobile) composite 2D in linear HDR, which crushed the scene to near black
+and over bloomed the neon, while the web Compatibility renderer ignores it and looked correct. So the
+render path is kept non HDR, no bloom, for one consistent look on every platform. The neon glow comes
+from the 2D light fixtures, not a bloom pass.
 
 `Board` builds the act as a scene tree: it instances the backdrop, the light fixtures and the cast
 (each a `Placement.scene`), positions and scales each one, creates the key light and the moon as

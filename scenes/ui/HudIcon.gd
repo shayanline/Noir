@@ -3,6 +3,8 @@ extends Control
 ## A HUD chip icon drawn in code (so it centres exactly and renders the same everywhere, the way
 ## Inkfall drew its CSS icons). Three kinds: the hamburger menu, the fullscreen corners and the
 ## poster frame. The tint follows the parent button's hover state.
+## The line draw calls pass antialiased = false, the web Compatibility renderer does not support
+## antialiased 2D line drawing, which rendered the glyph lines incorrectly.
 
 enum Kind { MENU, FULLSCREEN, POSTER }
 
@@ -31,17 +33,17 @@ func _draw() -> void:
 		Kind.MENU:
 			var w := u
 			for dy in [-u * 0.32, 0.0, u * 0.32]:
-				draw_line(Vector2(c.x - w * 0.5, c.y + dy), Vector2(c.x + w * 0.5, c.y + dy), tint, lw, true)
+				draw_line(Vector2(c.x - w * 0.5, c.y + dy), Vector2(c.x + w * 0.5, c.y + dy), tint, lw, false)
 		Kind.FULLSCREEN:
 			var h := u * 0.45
 			var ext := u * 0.5
 			# top-left and bottom-right corner brackets
-			draw_line(Vector2(c.x - ext, c.y - ext), Vector2(c.x - ext + h, c.y - ext), tint, lw, true)
-			draw_line(Vector2(c.x - ext, c.y - ext), Vector2(c.x - ext, c.y - ext + h), tint, lw, true)
-			draw_line(Vector2(c.x + ext, c.y + ext), Vector2(c.x + ext - h, c.y + ext), tint, lw, true)
-			draw_line(Vector2(c.x + ext, c.y + ext), Vector2(c.x + ext, c.y + ext - h), tint, lw, true)
+			draw_line(Vector2(c.x - ext, c.y - ext), Vector2(c.x - ext + h, c.y - ext), tint, lw, false)
+			draw_line(Vector2(c.x - ext, c.y - ext), Vector2(c.x - ext, c.y - ext + h), tint, lw, false)
+			draw_line(Vector2(c.x + ext, c.y + ext), Vector2(c.x + ext - h, c.y + ext), tint, lw, false)
+			draw_line(Vector2(c.x + ext, c.y + ext), Vector2(c.x + ext, c.y + ext - h), tint, lw, false)
 		Kind.POSTER:
 			var r := Rect2(c.x - u * 0.5, c.y - u * 0.42, u, u * 0.84)
 			draw_polyline(PackedVector2Array([
 				r.position, Vector2(r.end.x, r.position.y), r.end,
-				Vector2(r.position.x, r.end.y), r.position]), tint, lw, true)
+				Vector2(r.position.x, r.end.y), r.position]), tint, lw, false)

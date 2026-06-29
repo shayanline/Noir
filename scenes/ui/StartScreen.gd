@@ -31,6 +31,7 @@ const _TAG_CUR := Color(0.918, 0.353, 0.353, 1)
 
 var _stories: Array[Story] = []
 var _selected := 0
+var _hovered := -1
 var _cards: Array[PanelContainer] = []
 
 
@@ -84,8 +85,8 @@ func _make_card(s: Story, idx: int) -> PanelContainer:
 	card.set_meta(&"tag_lbl", tag_lbl)
 	card.set_meta(&"inner_box", box)
 	card.gui_input.connect(func(e: InputEvent): _on_card_input(e, idx))
-	card.mouse_entered.connect(func(): _restyle(idx, true))
-	card.mouse_exited.connect(func(): _restyle(idx, false))
+	card.mouse_entered.connect(func(): _set_hovered(idx))
+	card.mouse_exited.connect(func(): _set_hovered(-1, idx))
 	_cards.append(card)
 	return card
 
@@ -97,15 +98,31 @@ func _on_card_input(e: InputEvent, idx: int) -> void:
 
 func _select(i: int) -> void:
 	_selected = i
+	_hovered = -1
 	var s: Story = _stories[i]
 	_subtitle.text = s.subtitle
 	_blurb.text = s.blurb
-	for j in _cards.size():
-		_restyle(j, false)
+	_repaint_cards()
 
 
-## paint a card for its state: the chosen tale stays marked (red frame), the rest light up on hover.
-func _restyle(idx: int, hovered: bool) -> void:
+## track the hovered card. `only_if` clears the hover only when it still belongs to that card, so a
+## stale mouse_exited cannot wipe a newer hover. Touch input rarely fires mouse_exited, so the styling
+## never relies on it staying balanced: every change repaints all cards from _selected and _hovered.
+func _set_hovered(idx: int, only_if := -2) -> void:
+	if only_if != -2 and _hovered != only_if:
+		return
+	_hovered = idx
+	_repaint_cards()
+
+
+## paint every card from the single source of truth (_selected and _hovered), so exactly one card can
+## be marked current and at most one hovered, and none can get stuck highlighted.
+func _repaint_cards() -> void:
+	for idx in _cards.size():
+		_restyle(idx)
+
+
+func _restyle(idx: int) -> void:
 	var card := _cards[idx]
 	var name_lbl: Label = card.get_meta(&"name_lbl")
 	var tag_lbl: Label = card.get_meta(&"tag_lbl")
@@ -113,7 +130,7 @@ func _restyle(idx: int, hovered: bool) -> void:
 		card.theme_type_variation = &"StoryCardCur"
 		name_lbl.add_theme_color_override("font_color", _NAME_HI)
 		tag_lbl.add_theme_color_override("font_color", _TAG_CUR)
-	elif hovered:
+	elif idx == _hovered:
 		card.theme_type_variation = &"StoryCardHover"
 		name_lbl.add_theme_color_override("font_color", _NAME_HI)
 		tag_lbl.add_theme_color_override("font_color", _TAG_HI)

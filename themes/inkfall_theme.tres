@@ -218,6 +218,7 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.925, 0.902, 0.839, 0.45)
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="story_cur"]
 content_margin_left = 32.0
@@ -230,6 +231,7 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.882, 0, 0.063, 1)
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="story_hover"]
 content_margin_left = 32.0
@@ -242,6 +244,7 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 1, 1, 1)
+anti_aliasing = false
 
 [sub_resource type="FontVariation" id="font_storyname"]
 base_font = ExtResource("1_oswald")
