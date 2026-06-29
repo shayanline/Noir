@@ -13,6 +13,7 @@ signal fx(event: String)
 const RAIN_SCENE := preload("res://scenes/effects/RainField.tscn")
 const RIPPLES_SCENE := preload("res://scenes/effects/RainRipples.tscn")
 const SHIMMER_SCENE := preload("res://scenes/effects/WetFloorShimmer.gd")
+const NIGHTSKY_SCENE := preload("res://scenes/effects/NightSky.tscn")
 const LIGHTNING_SCENE := preload("res://scenes/effects/Lightning.tscn")
 
 var act: Act
@@ -25,6 +26,9 @@ var look := 0.0
 var line_index := 0
 
 var flags := {}
+
+## the moon's pixel position, shared by the visible moon (NightSky) and the moonlight (PointLight2D)
+var _moon_px := Vector2.ZERO
 
 var _key_light: PointLight2D
 var _moon_light: PointLight2D
@@ -45,14 +49,37 @@ func _ready() -> void:
 	position = r.position
 	unit = minf(size.x, size.y) / BoardObject.DESIGN_HEIGHT
 	ground_y = act.ground * size.y
+	_moon_px = Vector2(act.moon.x * size.x, act.moon.y * size.y)
 	GameState.line_changed.connect(_on_state_line)
 	GameState.fx_fired.connect(_on_state_fx)
+	_build_sky()
 	_build_lighting()
 	_build_content()
 	_build_weather()
 
 
 # --- build ---------------------------------------------------------------------------------
+
+## The graded night sky, stars, the visible moon and drifting clouds, placed behind the backdrop.
+## Outdoor only. The moonlight itself is a PointLight2D built in _build_lighting at the same point.
+func _build_sky() -> void:
+	if act.indoor:
+		return
+	var sky: NightSky = NIGHTSKY_SCENE.instantiate()
+	sky.area = size
+	sky.ground_y = ground_y
+	sky.has_moon = act.has_moon      # only the acts the story places a moon on (matches the original)
+	sky.show_clouds = _is_rooftop()  # clouds only on the rooftop
+	sky.moon_px = _moon_px
+	sky.z_index = -150
+	add_child(sky)
+
+
+## Whether this act's backdrop is the rooftop (the only place we let clouds drift).
+func _is_rooftop() -> bool:
+	return act.backdrop != null and act.backdrop.scene != null \
+		and act.backdrop.scene.resource_path.ends_with("Rooftop.tscn")
+
 
 func _build_lighting() -> void:
 	# a broad, dim fill so the cast never falls to pure black, the cool bounce of a rainy night
@@ -73,13 +100,15 @@ func _build_lighting() -> void:
 	_key_light.shadow_enabled = true
 	add_child(_key_light)
 
+	# the moonlight: a native PointLight2D at the same point as the visible moon, so the disc we see
+	# and the cool grade it casts are one and the same. Colour comes from the palette.
 	if act.has_moon and not act.indoor:
 		_moon_light = PointLight2D.new()
 		_moon_light.texture = LightTex.radial()
-		_moon_light.position = Vector2(act.moon.x * size.x, act.moon.y * size.y)
-		_moon_light.texture_scale = size.x / 256.0 * 3.0
-		_moon_light.energy = 1.0
-		_moon_light.color = Color(0.82, 0.87, 0.96)
+		_moon_light.position = _moon_px
+		_moon_light.texture_scale = size.x / 256.0 * 3.4
+		_moon_light.energy = 0.55   # a weak, broad cool wash, not a hot pool
+		_moon_light.color = Palette.MOON
 		add_child(_moon_light)
 
 
