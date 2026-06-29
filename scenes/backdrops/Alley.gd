@@ -16,13 +16,8 @@ func build(board_size: Vector2, ground_y: float) -> void:
 	var vx := vp.x * 0.5
 	var vy := vp.y * 0.4
 
-	_grad_rect(0, 0, vp.x, g, Color(0.04, 0.05, 0.08), Color(0.15, 0.16, 0.21))
-
-	var cfg := {"top": 0.3, "shade": Palette.FAR_INK, "min_w": 50.0, "max_w": 110.0, "min_h": 0.3, "max_h": 0.55, "win": 0.18}
-	var far := Sprite2D.new()
-	far.texture = BackdropBaker.bake_skyline(vp, vp.y * 0.62, _seed, [cfg])
-	far.centered = false
-	add_child(far)
+	# the sky sliver between the walls is drawn behind us by NightSky; a distant city shows in the gap
+	CitySkyline.build_far(self, vp, vp.y * 0.62, _seed)
 
 	_grad_rect(vx - vp.x * 0.12, vy, vp.x * 0.24, g - vy, Color8(40, 44, 58), Color8(12, 14, 20))
 

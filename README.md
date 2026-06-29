@@ -67,7 +67,8 @@ To add a new object or backdrop, make a scene under `scenes/actors`, `scenes/pro
 ```
 stories/                the tales (Story .tres) + the picker library.tres
 src/resources/          the data types: Story, Act, Line, Placement, StoryLibrary
-src/util/               LightTex (light textures), BackdropBaker (skyline baking)
+src/util/               LightTex (light textures)
+art/                    imported pixel-art assets (night sky moon and clouds, the city skyline)
 themes/                 inkfall_theme.tres, the shared UI theme (set as the project default)
 scenes/
   core/Main.*           the view controller: the authored global look (wash, bloom, camera, post)

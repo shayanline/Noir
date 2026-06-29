@@ -14,15 +14,12 @@ func build(board_size: Vector2, ground_y: float) -> void:
 	var vp := board_size
 	var g := ground_y
 
-	_grad_rect(0, 0, vp.x, g, Color(0.03, 0.04, 0.07), Color(0.17, 0.18, 0.24))
+	# the graded sky, stars and moon are drawn behind us by NightSky; keep only the horizon haze
+	# (transparent at the top) so it sits over the sky and lifts the far rooftops.
 	_grad_rect(0, vp.y * 0.5, vp.x, vp.y * 0.24, Color(0.157, 0.18, 0.235, 0.0), Color(0.275, 0.314, 0.412, 0.35))
 
-	var c0 := {"top": 0.4, "shade": Palette.FAR_INK, "min_w": 40.0, "max_w": 100.0, "min_h": 0.2, "max_h": 0.45, "win": 0.22}
-	var c1 := {"top": 0.46, "shade": Color8(6, 7, 11), "min_w": 60.0, "max_w": 140.0, "min_h": 0.16, "max_h": 0.38, "win": 0.18}
-	var far := Sprite2D.new()
-	far.texture = BackdropBaker.bake_skyline(vp, vp.y * 0.72, _seed, [c0, c1])
-	far.centered = false
-	add_child(far)
+	# the distant city sits low below the rooftop, drawn from the shared pixel-art skyline
+	CitySkyline.build_distant(self, vp, g, _seed)
 
 	_pole(vp.x * 0.05, vp.y * 0.18, vp.y * 0.2)
 	_pole(vp.x * 0.92, vp.y * 0.12, vp.y * 0.26)

@@ -41,7 +41,7 @@ src/
     light_radial.tres      shared radial falloff texture for the 2D lights and warm fixtures
     soft_glow.tres         shared soft glow texture for the steam particles
     LightTex.gd            loads and hands out light_radial.tres
-    BackdropBaker.gd       bakes the seeded skyline (buildings plus windows) to a texture
+art/                   imported pixel-art assets (the night sky moon and clouds, the city skyline)
 themes/
   inkfall_theme.tres     the shared UI theme (fonts, colours, styleboxes, type variations),
                          set as the project default theme in project.godot
@@ -60,13 +60,15 @@ scenes/
                            fx_fired, and fans them out to its objects by signal (plus the
                            board_object group).
     BoardObject.gd         base for everything placed on the board (placement, params, hooks)
-  backdrops/            Skyline, Alley, Rooftop, Room (BoardBackdrop) + BoardBackdrop.gd
+  backdrops/            Skyline, Alley, Rooftop, Room (BoardBackdrop) + BoardBackdrop.gd, plus
+                        CitySkyline (the shared tiled pixel-art city used by the outdoor backdrops)
   lights/              Lamp, Neon, Bulb (BoardLight) + BoardLight.gd (drives a PointLight2D)
   actors/             trenchMan, gunman, boss, thug, dealer, womanInRed, cat, crow
   props/              redCar, trafficLight, dumpster, manhole, waterTower, barrelFire, fireHydrant,
                       rouletteWheel, slotMachine, cardTable, cash, drink, knife
   effects/            steam and searchlight (particles and 2D lights), newspaper, the blood set
-                      (bodyOnGround, bloodSplat, bloodDrain), RainField, Lightning
+                      (bodyOnGround, bloodSplat, bloodDrain), RainField, RainRipples, WetFloorShimmer,
+                      NightSky (graded sky, stars, moon, clouds), Lightning
   ui/                 StartScreen (title and tale picker), Hud (captions, scene tag, nav), RotationGate
   transitions/        Transitions (ink wipe, act title card, the end card)
 tools/                build_stories.gd (regenerates the .tres tales), SmokeTest.*
