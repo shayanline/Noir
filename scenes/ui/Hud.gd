@@ -10,6 +10,8 @@ signal exit_requested
 signal poster_requested
 signal pause_changed(paused: bool)
 
+const _ELITE := preload("res://fonts/SpecialElite.ttf")   # the typewriter font, for the scene tag tracking
+
 const _BONE := Color(0.847, 0.831, 0.784, 1)
 const _WHITE := Color(1, 1, 1, 1)
 const _LINE := Color(0.863, 0.847, 0.784, 0.16)
@@ -363,20 +365,19 @@ func _menu_item(text: String, variation: StringName, on_press: Callable) -> Butt
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(on_press)
-	# the red diamond markers from the legacy: always lit on the primary action, lit on hover otherwise
-	var rest := 1.0 if variation == &"MenuItemPrimary" else 0.0
+	# the red diamond markers only appear on the hovered item, never at rest
 	var dl := _menu_dot(0.08)
 	var dr := _menu_dot(0.92)
 	b.add_child(dl)
 	b.add_child(dr)
-	dl.modulate.a = rest
-	dr.modulate.a = rest
+	dl.modulate.a = 0.0
+	dr.modulate.a = 0.0
 	b.mouse_entered.connect(func():
 		dl.modulate.a = 1.0
 		dr.modulate.a = 1.0)
 	b.mouse_exited.connect(func():
-		dl.modulate.a = rest
-		dr.modulate.a = rest)
+		dl.modulate.a = 0.0
+		dr.modulate.a = 0.0)
 	return b
 
 
@@ -734,6 +735,11 @@ func _rescale() -> void:
 	# scene tag position
 	_tag.position = Vector2(edg, edg)
 	_tag.add_theme_font_size_override("font_size", UIScale.fs_label)
+	# the scene tag carries the legacy's wide 0.25em tracking, proportional to its size
+	var tag_font := FontVariation.new()
+	tag_font.base_font = _ELITE
+	tag_font.spacing_glyph = roundi(UIScale.fs_label * 0.25)
+	_tag.add_theme_font_override("font", tag_font)
 	# caption: resize the SubViewport to match caption_max_w so text is never clipped on HiDPI
 	var cap_w := maxi(roundi(UIScale.caption_max_w), _CAP_VP.x)
 	_cap_vp.size = Vector2i(cap_w, _CAP_VP.y) * 2

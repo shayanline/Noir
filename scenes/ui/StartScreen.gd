@@ -138,6 +138,22 @@ func _restyle(idx: int) -> void:
 		card.theme_type_variation = &"StoryCard"
 		name_lbl.add_theme_color_override("font_color", _NAME_DIM)
 		tag_lbl.add_theme_color_override("font_color", _TAG_DIM)
+	# the padding override below shadows the variation's panel, so re-sync it to the new variation,
+	# otherwise the selected (red) border would stick on whichever card was current at the last scale
+	_apply_card_padding(card)
+
+
+## Override the card's panel stylebox with the dpr scaled padding, duplicated from the theme base of
+## the card's current variation so the variation's border colour is preserved.
+func _apply_card_padding(card: PanelContainer) -> void:
+	var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", card.theme_type_variation)
+	if sb is StyleBoxFlat:
+		var dup := sb.duplicate() as StyleBoxFlat
+		dup.content_margin_left = UIScale.card_pad_h
+		dup.content_margin_right = UIScale.card_pad_h
+		dup.content_margin_top = UIScale.card_pad_v
+		dup.content_margin_bottom = UIScale.card_pad_v
+		card.add_theme_stylebox_override("panel", dup)
 
 
 ## Apply responsive font sizes from the UIScale autoload, mirroring the legacy CSS vmin system.
@@ -173,16 +189,7 @@ func _rescale() -> void:
 		tag_lbl.custom_minimum_size.x = UIScale.card_min_w
 		var inner_box: VBoxContainer = card.get_meta(&"inner_box")
 		inner_box.add_theme_constant_override("separation", UIScale.card_sep)
-		# scale the card padding to match the legacy clamp. Duplicate from the theme base of the
-		# card's current variation so the dpr scaled border width stays current.
-		var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", card.theme_type_variation)
-		if sb is StyleBoxFlat:
-			var dup := sb.duplicate() as StyleBoxFlat
-			dup.content_margin_left = UIScale.card_pad_h
-			dup.content_margin_right = UIScale.card_pad_h
-			dup.content_margin_top = UIScale.card_pad_v
-			dup.content_margin_bottom = UIScale.card_pad_v
-			card.add_theme_stylebox_override("panel", dup)
+		_apply_card_padding(card)
 	# the bigger phone sizes can make this dense column taller than a short landscape phone, so
 	# shrink it to fit once the new sizes have settled. It stays centered and never clips.
 	call_deferred("_fit_to_height")

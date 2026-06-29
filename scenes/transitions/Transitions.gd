@@ -97,8 +97,23 @@ func clear() -> void:
 	_end.modulate.a = 0.0
 
 
-## Apply responsive font sizes from UIScale.
+## The display font, loaded once so the spaced variations can reuse it.
+const _OSWALD := preload("res://fonts/Oswald.ttf")
+
+
+## Apply responsive font sizes from UIScale, plus letter spacing proportional to the size so the
+## big act titles read with the legacy's wide tracking (0.32em on the cards, 0.42em on THE END)
+## rather than cramped.
 func _rescale() -> void:
 	for c in _cards:
 		c.add_theme_font_size_override("font_size", UIScale.fs_card)
+		c.add_theme_font_override("font", _spaced(roundi(UIScale.fs_card * 0.32)))
 	_end.add_theme_font_size_override("font_size", UIScale.fs_end)
+	_end.add_theme_font_override("font", _spaced(roundi(UIScale.fs_end * 0.42)))
+
+
+func _spaced(spacing: int) -> FontVariation:
+	var fv := FontVariation.new()
+	fv.base_font = _OSWALD
+	fv.spacing_glyph = spacing
+	return fv

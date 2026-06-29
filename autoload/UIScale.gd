@@ -56,6 +56,7 @@ var dpr := 1.0
 ## widths, corner radii and content margins). _font_bases keys a theme font size by "type/name".
 var _style_bases := {}
 var _font_bases := {}
+var _spacing_bases := {}
 
 ## The dpr the theme was last scaled at, so the pass is skipped when nothing changed. size_changed
 ## fires often on mobile web (address bar show or hide, pinch), but the theme scaling only depends
@@ -260,6 +261,16 @@ func _scale_theme() -> void:
 			var fbase: int = _font_bases[fkey]
 			if fbase > 0:
 				theme.set_font_size(fname, type, maxi(1, roundi(fbase * dpr)))
+		# letter spacing is authored in pixels at the design size, so scale it with dpr too, else the
+		# bigger mobile text reads cramped (the spacing would not keep pace with the glyphs)
+		for fontname in theme.get_font_list(type):
+			var fv := theme.get_font(fontname, type) as FontVariation
+			if fv == null or seen.has(fv.get_instance_id()):
+				continue
+			seen[fv.get_instance_id()] = true
+			if not _spacing_bases.has(fv.get_instance_id()):
+				_spacing_bases[fv.get_instance_id()] = fv.spacing_glyph
+			fv.spacing_glyph = roundi(_spacing_bases[fv.get_instance_id()] * dpr)
 		for sname in theme.get_stylebox_list(type):
 			var sb := theme.get_stylebox(sname, type)
 			if sb == null or seen.has(sb.get_instance_id()):
