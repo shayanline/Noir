@@ -10,5 +10,11 @@
     "url": "https://shayanline.github.io/Inkfall/copilot-fix-small-text-and-huds/",
     "sha": "8ad7da5",
     "updated": "2026-06-29 11:00"
+  },
+  {
+    "branch": "fix/web-render-lighting",
+    "url": "https://shayanline.github.io/Inkfall/fix-web-render-lighting/",
+    "sha": "b886856",
+    "updated": "2026-06-29 14:07"
   }
 ]
