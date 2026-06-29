@@ -461,23 +461,21 @@ func _build_poster() -> void:
 	col.add_theme_constant_override("separation", 16)
 	panel.add_child(col)
 
-	# the composed poster, matted in a crisp bordered frame
-	var mat := PanelContainer.new()
-	mat.theme_type_variation = &"PosterFrame"
-	mat.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	col.add_child(mat)
+	# the composed poster already carries its own inked frame, so the modal shows it directly with
+	# no extra matte (that was a border within a border)
 	_poster_img = TextureRect.new()
 	_poster_img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_poster_img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	mat.add_child(_poster_img)
+	_poster_img.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(_poster_img)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
 	col.add_child(row)
-	_poster_save = _menu_item("SAVE", &"MenuItemPrimary", _save_poster)
+	_poster_save = _menu_item("SAVE POSTER", &"MenuItemPrimary", _save_poster)
 	row.add_child(_poster_save)
-	row.add_child(_menu_item("BACK TO THE RAIN", &"MenuItem", _close_poster))
+	row.add_child(_menu_item("CANCEL", &"MenuItem", _close_poster))
 
 
 # --- public API ----------------------------------------------------------
@@ -595,7 +593,7 @@ func show_poster(tex: Texture2D, image: Image) -> void:
 	var vp := get_viewport_rect().size
 	var h := clampf(minf(vp.x * 0.6, vp.y * 0.6), 280.0, 900.0)
 	_poster_img.custom_minimum_size = Vector2(h * ts.x / maxf(ts.y, 1.0), h)
-	_poster_save.text = "SAVE"
+	_poster_save.text = "SAVE POSTER"
 	_poster_save.disabled = false
 	_poster.visible = true
 	pause_changed.emit(true)
