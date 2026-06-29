@@ -372,7 +372,10 @@ func _on_poster_requested() -> void:
 func _crop_to_scene(shot: Image) -> Image:
 	var r := UIScale.content_rect
 	var full := Rect2i(Vector2i.ZERO, shot.get_size())
-	var region := Rect2i(int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)).intersection(full)
+	# floor the start and ceil the end so a fractional dpr content rect is fully contained, rather
+	# than truncating and leaving a 1px letterbox bar or shaving a pixel off the scene
+	var pos := Vector2i(floori(r.position.x), floori(r.position.y))
+	var region := Rect2i(pos, Vector2i(ceili(r.end.x), ceili(r.end.y)) - pos).intersection(full)
 	if region.has_area() and region != full:
 		return shot.get_region(region)
 	return shot
@@ -380,7 +383,7 @@ func _crop_to_scene(shot: Image) -> Image:
 
 ## Compose the downloadable poster from the captured scene, a faithful port of the legacy
 ## makePoster: the whole scene framed by an inked border with red splatter corners, the INKFALL
-## wordmark, the narration tagline, a footer and a halftone wash. Rendered in a SubViewport whose
+## wordmark, the narration tagline and a halftone wash. Rendered in a SubViewport whose
 ## height follows the scene aspect, so the full scene shows and the output is a consistent 900px wide.
 func _compose_poster(frame: Image) -> Image:
 	var canvas := PosterCanvas.new()

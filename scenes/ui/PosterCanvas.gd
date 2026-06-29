@@ -2,9 +2,9 @@ class_name PosterCanvas
 extends Control
 ## Draws a shareable Inkfall poster, a faithful port of the legacy HTML makePoster. The captured
 ## scene sits in an inked white border with red ink splatter corners, under the skewed INKFALL
-## wordmark, over the narration tagline and a footer, with a faint halftone wash on top.
+## wordmark, over the narration tagline, with a faint halftone wash on top.
 ##
-## The poster is a fixed 900px wide; the frame height follows the captured scene's aspect, so the
+## The poster is a fixed 900px wide, and the frame height follows the captured scene's aspect, so the
 ## whole scene shows undistorted and the layout never overflows, exactly as the original did.
 
 const PW := 900       ## poster width (fixed, so the saved image is a consistent shape)
@@ -20,8 +20,8 @@ const _TAG_PX := 24
 var scene_tex: Texture2D
 var tagline := ""
 
-var _title_font: Font = load("res://fonts/Oswald.ttf")
-var _body_font: Font = load("res://fonts/SpecialElite.ttf")
+var _title_font: Font = preload("res://fonts/Oswald.ttf")
+var _body_font: Font = preload("res://fonts/SpecialElite.ttf")
 var _halftone: Texture2D
 
 

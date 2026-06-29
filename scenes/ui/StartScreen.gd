@@ -208,11 +208,18 @@ func _rescale() -> void:
 ## landscape phone the ENTER button is not jammed against the bottom and nothing touches the side
 ## edges. When it already fits within that margin the scale is 1 and the layout is untouched.
 const _FIT_MARGIN := 0.9   # leave ~10% on each axis as breathing room from the screen edges
+var _fit_token := 0
 
 func _fit_to_viewport() -> void:
+	# coalesce rapid calls (mobile web fires size_changed often): only the latest scheduled fit, the
+	# one whose token still matches after the awaited frame, gets to apply a scale
+	_fit_token += 1
+	var token := _fit_token
 	_vbox.pivot_offset = Vector2.ZERO
 	_vbox.scale = Vector2.ONE
 	await get_tree().process_frame
+	if token != _fit_token:
+		return
 	var needed := _vbox.size
 	if needed.x <= 0.0 or needed.y <= 0.0:
 		return

@@ -216,11 +216,17 @@ func _rescale() -> void:
 ## Scale the centered column to sit within the viewport with a margin on every side, so the text and
 ## buttons keep clear of the screen edges and never overflow. Untouched when it already fits.
 const _FIT_MARGIN := 0.8
+var _fit_token := 0
 
 func _fit_to_viewport() -> void:
+	# coalesce rapid calls (mobile web fires size_changed often): only the latest fit applies
+	_fit_token += 1
+	var token := _fit_token
 	_vbox.pivot_offset = Vector2.ZERO
 	_vbox.scale = Vector2.ONE
 	await get_tree().process_frame
+	if token != _fit_token:
+		return
 	var needed := _vbox.size
 	if needed.x <= 0.0 or needed.y <= 0.0:
 		return

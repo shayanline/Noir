@@ -51,8 +51,8 @@ var safe_bottom := 0.0
 ## by dpr, so callers that use `vmin * factor` get a physical-pixel result without extra work.
 var vmin := 1080.0
 
-## Device pixel ratio. On web exports the canvas is sized to physical pixels; on all other
-## platforms Godot handles HiDPI internally and this is always 1.0.
+## Device pixel ratio. On web exports the canvas is sized to physical pixels, and on all other
+## platforms Godot handles HiDPI internally so this is always 1.0.
 var dpr := 1.0
 
 ## Caches of the authored theme values, captured once so the dpr scaling in _scale_theme always
@@ -73,7 +73,7 @@ var gap := 6.0
 ## Screen edge inset for positioned HUD elements (physical pixels). Scaled by dpr.
 var edge := 20.0
 
-## Vertical extent of the end-of-story act row (physical pixels). Scaled by dpr.
+## Vertical extent of the end of story act row (physical pixels). Scaled by dpr.
 var end_box_top := 240.0
 var end_box_bottom := 90.0
 
@@ -202,12 +202,12 @@ func _recompute() -> void:
 	vmin = minf(cw, ch) * dpr
 
 	# font sizes: clamp(min_css * scale, factor * vmin, max_css * scale). Start screen and gate use
-	# ui_s (orientation compensated); the HUD chrome uses ui (kept as is); the caption uses ui_cap.
+	# ui_s (orientation compensated), the HUD chrome uses ui (kept as is), the caption uses ui_cap.
 	fs_title = _clamp_i(roundi(54 * ui_s), vmin * 0.14, roundi(130 * ui_s))
 	fs_sub = _clamp_i(roundi(15 * ui_s), vmin * 0.03, roundi(22 * ui_s))
 	fs_body = _clamp_i(roundi(14 * ui_s), vmin * 0.024, roundi(19 * ui_s))
 	fs_menu = _clamp_i(roundi(13 * ui_s), vmin * 0.022, roundi(15 * ui_s))
-	# the caption reads at a comfortable size near the HUD; it wraps to new lines when it does not fit
+	# the caption reads at a comfortable size near the HUD, wrapping to new lines when it does not fit
 	fs_caption = _clamp_i(roundi(11 * ui_cap), vmin * 0.02, roundi(14 * ui_cap))
 	fs_label = _clamp_i(roundi(11 * ui), vmin * 0.02, roundi(14 * ui))
 	fs_hud = _clamp_i(roundi(10 * ui), vmin * 0.02, roundi(13 * ui))
@@ -345,7 +345,7 @@ func _scale_px(base: int) -> int:
 
 
 ## Scale a content margin by dpr. An unset margin (-1) is left untouched so the stylebox keeps
-## deriving it; a real margin (0 or more) scales.
+## deriving it. A real margin (0 or more) scales.
 func _scale_margin(base: float) -> float:
 	if base < 0.0:
 		return base
@@ -359,7 +359,7 @@ func _scale_margin(base: float) -> float:
 ## Two independent sources are queried and the larger is used. DisplayServer.screen_get_scale()
 ## reads the ratio natively at engine level and is available immediately, while the
 ## JavaScriptBridge eval can return null or run before the bridge is ready on some mobile
-## browsers and in-app webviews. Relying on a single source left the ratio at 1.0 on those
+## browsers and in app webviews. Relying on a single source left the ratio at 1.0 on those
 ## devices, which squashed the whole HUD. Taking the max means whichever source reports the real
 ## ratio wins, so the HUD is only left at 1.0 when the device genuinely has no pixel scaling.
 static func _dpr() -> float:

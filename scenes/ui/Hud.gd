@@ -573,7 +573,9 @@ func _process(_delta: float) -> void:
 	# feed the panel's live bounds (UV within the render target) to the reveal shader, so the torn
 	# sweep crosses the visible caption over its full duration rather than racing across empty margins
 	if _cap_shown and _caption and _cap_mat:
-		var vp := Vector2(_CAP_VP)
+		# normalize against the live override size, not the _CAP_VP constant: cap_w grows past 1200 on
+		# high dpr, and using the wrong width misaligns the torn reveal sweep
+		var vp := Vector2(_cap_vp.size_2d_override)
 		var p := _caption.position
 		var s := _caption.size
 		_cap_mat.set_shader_parameter("cap_rect",
@@ -764,9 +766,11 @@ func _rescale() -> void:
 	tag_font.base_font = _ELITE
 	tag_font.spacing_glyph = roundi(UIScale.fs_label * 0.25)
 	_tag.add_theme_font_override("font", tag_font)
-	# caption: resize the SubViewport to match caption_max_w so text is never clipped on HiDPI
+	# caption: resize the SubViewport to match caption_max_w so text is never clipped on HiDPI.
+	# supersample 2x only at low dpr, since a HiDPI canvas is already crisp, to save render target memory
 	var cap_w := maxi(roundi(UIScale.caption_max_w), _CAP_VP.x)
-	_cap_vp.size = Vector2i(cap_w, _CAP_VP.y) * 2
+	var cap_ss := 1 if UIScale.dpr >= 2.0 else 2
+	_cap_vp.size = Vector2i(cap_w, _CAP_VP.y) * cap_ss
 	_cap_vp.size_2d_override = Vector2i(cap_w, _CAP_VP.y)
 	_cap_tex.custom_minimum_size = Vector2(cap_w, _CAP_VP.y)
 	_caption_label.add_theme_font_size_override("normal_font_size", UIScale.fs_caption)
@@ -807,7 +811,7 @@ func _rescale() -> void:
 	_review_btn.custom_minimum_size = Vector2(cell * 3 + gap * 2, cell)
 	_review_btn.add_theme_font_size_override("font_size", UIScale.fs_hud)
 	_navdrop.add_theme_constant_override("separation", gap)
-	# end-of-story act row
+	# end of story act row
 	_end_box.offset_top = -UIScale.end_box_top
 	_end_box.offset_bottom = -UIScale.end_box_bottom
 	_end_row.add_theme_constant_override("separation", roundi(16.0 * UIScale.dpr))
