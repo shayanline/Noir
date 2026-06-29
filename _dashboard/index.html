@@ -34,10 +34,10 @@
 <body>
   <main>
     <h1>Inkfall branch previews</h1>
-    <p class="sub">Live build of every branch. This page refreshes itself, and rebuilds from the deployed folders on each run. Generated 2026-06-29 22:45 UTC.</p>
+    <p class="sub">Live build of every branch. This page refreshes itself, and rebuilds from the deployed folders on each run. Generated 2026-06-29 22:47 UTC.</p>
     <table>
       <thead>
-        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated (UTC)</th><th>Commit</th></tr>
+        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated</th><th>Commit</th></tr>
       </thead>
       <tbody>
       <tr>
@@ -45,7 +45,7 @@
         <td><a href="https://shayanline.github.io/Inkfall/">open</a></td>
         <td><span class="muted">-</span></td>
         <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 16:50</td>
+        <td class="updated" data-utc="2026-06-29 16:50">2026-06-29 16:50 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/d48e22b"><code>d48e22b</code></a></td>
       </tr>
       <tr>
@@ -53,19 +53,45 @@
         <td><a href="https://shayanline.github.io/Inkfall/branches/copilot-fix-small-text-and-huds-7b696ea2/">open</a></td>
         <td><a href="https://github.com/shayanline/Inkfall/pull/3">#3</a></td>
         <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 22:45</td>
+        <td class="updated" data-utc="2026-06-29 22:45">2026-06-29 22:45 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/46bd049"><code>46bd049</code></a></td>
       </tr>
       <tr>
         <td><code>fix/dashboard-local-time</code></td>
         <td><a href="https://shayanline.github.io/Inkfall/branches/fix-dashboard-local-time-9b771b81/">open</a></td>
         <td><a href="https://github.com/shayanline/Inkfall/pull/8">#8</a></td>
-        <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 22:41</td>
-        <td><a href="https://github.com/shayanline/Inkfall/commit/bb0d601"><code>bb0d601</code></a></td>
+        <td><span class="badge building">building</span></td>
+        <td class="updated" data-utc="2026-06-29 22:47">2026-06-29 22:47 UTC</td>
+        <td><a href="https://github.com/shayanline/Inkfall/commit/b2eace3"><code>b2eace3</code></a></td>
       </tr>
       </tbody>
     </table>
   </main>
+  <script>
+    (function () {
+      if (!('Intl' in window) || typeof Intl.RelativeTimeFormat !== 'function') return;
+      var rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+      var units = [
+        ['year', 31536000],
+        ['month', 2592000],
+        ['day', 86400],
+        ['hour', 3600],
+        ['minute', 60],
+      ];
+        return rtf.format(Math.round(diff), 'second');
+      }
+      function render() {
+        var cells = document.querySelectorAll('.updated[data-utc]');
+        for (var i = 0; i < cells.length; i++) {
+          var raw = cells[i].getAttribute('data-utc').replace(' ', 'T');
+          var date = new Date(/Tdd:dd:dd/.test(raw) ? raw + 'Z' : raw + ':00Z');
+          if (isNaN(date.getTime())) continue;
+          cells[i].textContent = ago(date);
+          cells[i].title = date.toLocaleString();
+        }
+      }
+      render();
+    })();
+  </script>
 </body>
 </html>
