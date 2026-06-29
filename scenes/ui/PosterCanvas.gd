@@ -10,15 +10,12 @@ extends Control
 const PW := 900       ## poster width (fixed, so the saved image is a consistent shape)
 const MARGIN := 56    ## inset of the scene frame from the poster edge
 const FY := 150       ## top of the scene frame (the wordmark sits above it)
-const FOOT_GAP := 170 ## space kept below the frame for the tagline and footer
+const FOOT_GAP := 120 ## space kept below the frame for the tagline
 
 const _INK := Color(0.882, 0, 0.063)        ## the red that bleeds
 const _BONE := Color(0.847, 0.831, 0.784)   ## tagline
-const _GREY := Color(0.416, 0.416, 0.416)   ## footer
 const _TITLE_PX := 88
 const _TAG_PX := 24
-const _FOOT_PX := 13
-const _FOOTER := "B A S I N   C I T Y   ·   I N K F A L L"
 
 var scene_tex: Texture2D
 var tagline := ""
@@ -51,7 +48,6 @@ func _draw() -> void:
 	_draw_splatter(fw, fh)
 	_draw_title()
 	_draw_tagline(fw, fh)
-	draw_string(_body_font, Vector2(0, ph - 40), _FOOTER, HORIZONTAL_ALIGNMENT_CENTER, PW, _FOOT_PX, _GREY)
 	# a faint halftone wash over the whole poster
 	if _halftone == null:
 		_halftone = _build_halftone()
