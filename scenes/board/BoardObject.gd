@@ -27,6 +27,10 @@ var board: Board
 
 const DESIGN_HEIGHT := 360.0
 
+## The shared volume-normal material that lets the board's 2D lights wrap a flat figure (see
+## apply_volume_light and shaders/figure_light.gdshader).
+const _FIGURE_SHADER := preload("res://shaders/figure_light.gdshader")
+
 
 ## called by the board before the object enters the tree.
 func setup(p: Dictionary, b: Board) -> void:
@@ -96,6 +100,45 @@ func build_occluders() -> void:
 		occ.occluder = shape
 		occ.transform = poly.transform   # match the polygon's own placement within the object
 		add_child(occ)
+
+
+## Give this object a rounded volume so the board's 2D lights wrap it directionally: the side
+## turned toward a source (a barrel fire, a street lamp) warms, the side turned away falls to
+## shadow. Walks the same solid Polygon2D children that cast shadows and assigns the shared
+## volume-normal material, sized to the object's own silhouette bounds (so the whole figure reads
+## as one form, not a stack of flat plates). Bright (emissive) polygons are skipped, so flames,
+## glass and neon keep their flat glow. Called by Board after build_occluders(); safe to call once.
+func apply_volume_light() -> void:
+	var lit: Array[Polygon2D] = []
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for c in get_children():
+		if not (c is Polygon2D):
+			continue
+		var poly := c as Polygon2D
+		if poly.polygon.size() < 3:
+			continue
+		# Skip emissive shapes, the same rule the occluders use: a bright part is a light, not a
+		# surface to be shaded, so it keeps its flat glow for the bloom to spread.
+		var col := poly.color
+		if maxf(maxf(col.r, col.g), col.b) > 0.6:
+			continue
+		lit.append(poly)
+		for p in poly.polygon:
+			var w: Vector2 = poly.transform * p   # the point in this object's local space
+			lo = Vector2(minf(lo.x, w.x), minf(lo.y, w.y))
+			hi = Vector2(maxf(hi.x, w.x), maxf(hi.y, w.y))
+	if lit.is_empty() or hi.x <= lo.x:
+		return
+	for poly in lit:
+		var mat := ShaderMaterial.new()
+		mat.shader = _FIGURE_SHADER
+		# Express the shared object bounds in this polygon's own local space, so a child offset
+		# shifts where the polygon sits in the volume rather than giving it a volume of its own.
+		var off: Vector2 = poly.transform.origin
+		mat.set_shader_parameter("bounds_min", lo - off)
+		mat.set_shader_parameter("bounds_max", hi - off)
+		poly.material = mat
 
 
 func _current_y() -> float:

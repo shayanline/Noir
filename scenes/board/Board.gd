@@ -151,6 +151,7 @@ func _build_content() -> void:
 		var obj := _spawn(p, 0)
 		if obj:
 			obj.build_occluders()
+			obj.apply_volume_light()
 
 
 ## Set light_mask on a node and all its CanvasItem descendants, so a whole backdrop joins one layer.

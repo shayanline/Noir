@@ -104,7 +104,7 @@ position = Vector2(0, -46)
 texture = ExtResource("2")
 color = Color(1, 0.549, 0.157, 1)
 energy = 1.1
-texture_scale = 1.6
+texture_scale = 2.6
 
 [node name="Barrel" type="Polygon2D" parent="."]
 polygon = PackedVector2Array(-16, -44, 16, -44, 16, 0, -16, 0)

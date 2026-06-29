@@ -20,18 +20,31 @@ const SPARK := Color(1.0, 0.7, 0.3)            ## warm lighter / struck match
 
 const _TEX_RADIUS := 128.0   # half-width of the shared radial light texture, for px -> texture_scale
 
+# Light height (in pixels) feeds the 2D normal pass: it is the source's virtual elevation above the
+# board plane. With the figures now carrying a volume normal (see BoardObject.apply_volume_light),
+# height decides how a light reads on a body. A practical light sits low, so it rakes across the
+# figure and wraps its volume (the lit side warms, the far side falls dark). A broad fill sits high,
+# almost overhead, so it lifts the whole figure fairly evenly and never lets it crush to pure black.
+const KEY_HEIGHT := 60.0     ## practical, placed sources: the fire, the lamp, a flash. Rakes and wraps.
+const FILL_HEIGHT := 380.0   ## broad, placeless fills: the key wash, the bounce, the moon. Frontal lift.
+
 
 ## Make a light a soft-edged noir shadow caster. smooth widens the PCF blur (larger = softer edge).
-static func caster(light: PointLight2D, shadow_color: Color = COOL, smooth: float = 2.5) -> void:
+## height is the source's virtual elevation, low by default so the light wraps the figures' volume.
+static func caster(light: PointLight2D, shadow_color: Color = COOL, smooth: float = 2.5, \
+		height: float = KEY_HEIGHT) -> void:
 	light.shadow_enabled = true
 	light.shadow_color = shadow_color
 	light.shadow_filter = Light2D.SHADOW_FILTER_PCF13
 	light.shadow_filter_smooth = smooth
+	light.height = height
 
 
-## Make a light a soft fill that lights without casting shadows (broad, placeless sources).
-static func ambient(light: PointLight2D) -> void:
+## Make a light a soft fill that lights without casting shadows (broad, placeless sources). height
+## sits high by default so the fill lifts the figures' volume from the front rather than raking it.
+static func ambient(light: PointLight2D, height: float = FILL_HEIGHT) -> void:
 	light.shadow_enabled = false
+	light.height = height
 
 
 ## Spawn a brief real burst of light at pos (in parent's local space): a muzzle flash, a struck
