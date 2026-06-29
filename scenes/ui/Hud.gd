@@ -639,13 +639,17 @@ func _repaint_nav() -> void:
 func _populate(container: Container, is_drop: bool) -> void:
 	for c in container.get_children():
 		c.queue_free()
+	# size and font scale with the device pixel ratio, like the rest of the HUD
+	var cell := float(UIScale.hud_cell)
+	var gap := roundi(UIScale.gap)
 	for i in _titles.size():
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.text = String(_titles[i]).strip_edges()
+		b.add_theme_font_size_override("font_size", UIScale.fs_hud)
 		if is_drop:
 			b.theme_type_variation = &"NavDrop"
-			b.custom_minimum_size = Vector2(_CELL * 3 + _GAP * 2, _CELL)
+			b.custom_minimum_size = Vector2(cell * 3 + gap * 2, cell)
 			if i == _cur_act:
 				b.add_theme_color_override("font_color", _WHITE)
 		else:
@@ -739,7 +743,9 @@ func _on_line_changed(_idx: int) -> void:
 ## Apply responsive sizes from UIScale, mirroring the legacy CSS vmin system.
 func _rescale() -> void:
 	var cell := float(UIScale.hud_cell)
-	var gap := UIScale.gap
+	# round the gap once and use the same integer for both the container separation and the width
+	# reservation, so the reserved width matches the laid out width and never clips by a pixel
+	var gap := roundi(UIScale.gap)
 	var edg := UIScale.edge
 	# scene tag position
 	_tag.position = Vector2(edg, edg)
@@ -774,16 +780,19 @@ func _rescale() -> void:
 	_topbar.offset_right = -edg
 	_topbar.offset_top = edg
 	_topbar.offset_left = -(cell * chip_count + gap * (chip_count - 1) + edg)
-	_topbar.add_theme_constant_override("separation", roundi(gap))
+	_topbar.add_theme_constant_override("separation", gap)
 	for chip in _chips:
 		chip.custom_minimum_size = Vector2(cell, cell)
 		chip.add_theme_font_size_override("font_size", UIScale.fs_hud)
-	# review act column and button
+	# review act column, button and the dropdown under it
 	_actsel_col.position = Vector2(edg, edg)
-	_actsel_col.add_theme_constant_override("separation", roundi(gap))
+	_actsel_col.add_theme_constant_override("separation", gap)
 	_review_btn.custom_minimum_size = Vector2(cell * 3 + gap * 2, cell)
 	_review_btn.add_theme_font_size_override("font_size", UIScale.fs_hud)
+	_navdrop.add_theme_constant_override("separation", gap)
 	# end-of-story act row
 	_end_box.offset_top = -UIScale.end_box_top
 	_end_box.offset_bottom = -UIScale.end_box_bottom
 	_end_row.add_theme_constant_override("separation", roundi(16.0 * UIScale.dpr))
+	# rebuild any visible act buttons so their size and font pick up the new scale
+	_repaint_nav()
