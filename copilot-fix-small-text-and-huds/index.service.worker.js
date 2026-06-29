@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1782743033|4488085';
+const CACHE_VERSION = '1782744471|4272700';
 /** @type {string} */
 const CACHE_PREFIX = 'Inkfall-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
