@@ -239,7 +239,8 @@ ${rows}
       function render() {
         var cells = document.querySelectorAll('.updated[data-utc]');
         for (var i = 0; i < cells.length; i++) {
-          var date = new Date(cells[i].getAttribute('data-utc').replace(' ', 'T') + ':00Z');
+          var raw = cells[i].getAttribute('data-utc').replace(' ', 'T');
+          var date = new Date(/T\d\d:\d\d:\d\d/.test(raw) ? raw + 'Z' : raw + ':00Z');
           if (isNaN(date.getTime())) continue;
           cells[i].textContent = ago(date);
           cells[i].title = date.toLocaleString();
