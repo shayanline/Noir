@@ -193,21 +193,24 @@ func _rescale() -> void:
 		var inner_box: VBoxContainer = card.get_meta(&"inner_box")
 		inner_box.add_theme_constant_override("separation", UIScale.card_sep)
 		_apply_card_padding(card)
-	# the bigger phone sizes can make this dense column taller than a short landscape phone, so
-	# shrink it to fit once the new sizes have settled. It stays centered and never clips.
-	call_deferred("_fit_to_height")
+	# the bigger phone sizes can make this dense column overflow a short landscape phone, so shrink
+	# it to fit within a margin once the new sizes have settled. It stays centered and never clips.
+	call_deferred("_fit_to_viewport")
 
 
-## Scale the centered column down if it is taller than the screen, so nothing clips on a short
-## viewport. When it fits, the scale is 1 and the layout is untouched.
-func _fit_to_height() -> void:
+## Scale the centered column to sit within the viewport with a margin on every side, so on a short
+## landscape phone the ENTER button is not jammed against the bottom and nothing touches the side
+## edges. When it already fits within that margin the scale is 1 and the layout is untouched.
+const _FIT_MARGIN := 0.9   # leave ~10% on each axis as breathing room from the screen edges
+
+func _fit_to_viewport() -> void:
 	_vbox.pivot_offset = Vector2.ZERO
 	_vbox.scale = Vector2.ONE
 	await get_tree().process_frame
-	var needed := _vbox.size.y
-	if needed <= 0.0:
+	var needed := _vbox.size
+	if needed.x <= 0.0 or needed.y <= 0.0:
 		return
-	var s := minf(1.0, size.y / needed)
+	var s := minf(1.0, minf(size.x * _FIT_MARGIN / needed.x, size.y * _FIT_MARGIN / needed.y))
 	if s < 1.0:
-		_vbox.pivot_offset = _vbox.size * 0.5
+		_vbox.pivot_offset = needed * 0.5
 		_vbox.scale = Vector2(s, s)

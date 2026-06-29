@@ -142,6 +142,10 @@ var caption_bottom := 48.0
 ## Tap note bottom offset.
 var tap_bottom := 10.0
 
+## The orientation compensation factor (1.0 off touch web). Exposed so the rotation gate can scale
+## its phone icon the same way its text scales.
+var ui_comp := 1.0
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -169,6 +173,7 @@ func _recompute() -> void:
 	# cards and caption (seen across orientations), not the HUD chrome (only seen in landscape, and
 	# already the right size). Touch web only, so desktop and native are untouched.
 	var comp := (1.0 / clampf(fit, 0.45, 1.6)) if boost else 1.0
+	ui_comp = comp
 	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0)           # HUD chrome: chips, scene tag, tap note
 	var ui_s := ui * comp                                        # start screen and gate, orientation consistent
 	var ui_title := dpr * (TITLE_BOOST if boost else 1.0) * comp  # the big act and end title cards
