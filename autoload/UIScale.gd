@@ -34,8 +34,8 @@ const ASPECT_MAX := 21.0 / 9.0    # 2.333
 ## display titles want more, the narration caption wants less (it was reading too large), the rest
 ## sit in between. The pause menu is deliberately not boosted (it scales with dpr only and looks
 ## right). All are 1.0 off touch web, so desktop and native are unchanged. Tune these to taste.
-const MOBILE_UI_BOOST := 1.6    ## general HUD, start screen, gate, chips
-const TITLE_BOOST := 1.9        ## the big display titles: wordmark, act cards, THE END
+const MOBILE_UI_BOOST := 1.6    ## general HUD, start screen, gate, chips, wordmark
+const TITLE_BOOST := 1.9        ## the big act and end title cards
 const CAPTION_BOOST := 1.15     ## the narration caption (kept smaller)
 
 ## The clamped content rectangle in viewport coordinates. UI should be laid out within this.
@@ -161,9 +161,19 @@ func _recompute() -> void:
 	# borders) stay on the true dpr so the layout does not overflow and thin borders stay crisp.
 	# Off touch web every boost is 1.0, so the look on desktop and native is unchanged.
 	var boost := _is_touch_web()
-	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0)        # general HUD, start screen, gate, chips
-	var ui_title := dpr * (TITLE_BOOST if boost else 1.0)      # the big display titles
-	var ui_cap := dpr * (CAPTION_BOOST if boost else 1.0)      # the narration caption
+	# the canvas_items stretch fits the 1920x1080 base to the window, and that fit factor is smaller
+	# in portrait than landscape, so the same font reads smaller in portrait (the start screen and
+	# rotation gate, seen in portrait, came out tiny). comp cancels that, enlarging when the fit is
+	# below 1 (portrait, small windows) and leaving landscape and large windows alone.
+	var win := Vector2(DisplayServer.window_get_size())
+	var fit := minf(win.x / 1920.0, win.y / 1080.0) if win.x > 0.0 and win.y > 0.0 else 1.0
+	# partial compensation (clamp floor 0.75, so at most ~1.33x): enough to lift portrait well above
+	# its old shrunk size, but not so far that the two side by side story cards overflow their text.
+	# Touch web only, so a small desktop browser window is not unexpectedly enlarged.
+	var comp := (1.0 / clampf(fit, 0.75, 1.0)) if boost else 1.0
+	var ui := dpr * (MOBILE_UI_BOOST if boost else 1.0) * comp     # general HUD, start screen, gate, chips
+	var ui_title := dpr * (TITLE_BOOST if boost else 1.0) * comp   # the big act and end title cards
+	var ui_cap := dpr * (CAPTION_BOOST if boost else 1.0)         # the narration caption (no comp: landscape only)
 	var vw := vp.x / dpr
 	var vh := vp.y / dpr
 	var ar := vw / maxf(vh, 1.0)
@@ -188,11 +198,14 @@ func _recompute() -> void:
 
 	# font sizes: clamp(min_css * ui, factor * vmin, max_css * ui). The ui boost lifts the small
 	# end of the range on phones, which is where the HUD lands on a 1080 tall content area.
-	fs_title = _clamp_i(roundi(54 * ui_title), vmin * 0.14, roundi(130 * ui_title))
+	# the wordmark rides the general scale (not the bigger title scale), so the start screen reads a
+	# touch smaller; it is still the largest element on the screen via its big base size
+	fs_title = _clamp_i(roundi(54 * ui), vmin * 0.14, roundi(130 * ui))
 	fs_sub = _clamp_i(roundi(15 * ui), vmin * 0.03, roundi(22 * ui))
 	fs_body = _clamp_i(roundi(14 * ui), vmin * 0.024, roundi(19 * ui))
 	fs_menu = _clamp_i(roundi(13 * ui), vmin * 0.022, roundi(15 * ui))
-	fs_caption = _clamp_i(roundi(13 * ui_cap), vmin * 0.024, roundi(18 * ui_cap))
+	# the caption was reading too large, so its bounds are about half the others
+	fs_caption = _clamp_i(roundi(7 * ui_cap), vmin * 0.012, roundi(9 * ui_cap))
 	fs_label = _clamp_i(roundi(11 * ui), vmin * 0.02, roundi(14 * ui))
 	fs_hud = _clamp_i(roundi(10 * ui), vmin * 0.02, roundi(13 * ui))
 	fs_icon = _clamp_i(roundi(14 * ui), vmin * 0.03, roundi(18 * ui))
@@ -219,10 +232,10 @@ func _recompute() -> void:
 	vbox_sep = _clamp_i(roundi(8 * dpr), vmin * 0.014, roundi(18 * dpr))
 	tales_gap = _clamp_i(roundi(12 * dpr), vmin * 0.02, roundi(18 * dpr))
 	card_sep = _clamp_i(roundi(6 * dpr), vmin * 0.012, roundi(10 * dpr))
-	caption_min_w = clampf(cw * dpr * 0.30, 320 * dpr, 600 * dpr)
+	caption_min_w = clampf(cw * dpr * 0.18, 180 * dpr, 380 * dpr)
 	caption_max_w = minf(cw * dpr * 0.9, 600 * dpr)
-	caption_pad_h = clampf(vmin * 0.022, 12 * ui, 18 * ui)
-	caption_pad_v = clampf(vmin * 0.017, 9 * ui, 13 * ui)
+	caption_pad_h = clampf(vmin * 0.011, 7 * ui_cap, 11 * ui_cap)
+	caption_pad_v = clampf(vmin * 0.0085, 5 * ui_cap, 8 * ui_cap)
 	caption_bottom = clampf(safe_bottom + vmin * 0.04, 24 * dpr, 60 * dpr)
 	tap_bottom = maxf(safe_bottom + 6 * dpr, 10 * dpr)
 
