@@ -12,7 +12,7 @@ signal fx(event: String)
 
 const RAIN_SCENE := preload("res://scenes/effects/RainField.tscn")
 const RIPPLES_SCENE := preload("res://scenes/effects/RainRipples.tscn")
-const SHIMMER_SCENE := preload("res://scenes/effects/WetFloorShimmer.gd")
+const WET_FLOOR_SCENE := preload("res://scenes/effects/WetFloor.gd")
 const NIGHTSKY_SCENE := preload("res://scenes/effects/NightSky.tscn")
 const LIGHTNING_SCENE := preload("res://scenes/effects/Lightning.tscn")
 
@@ -73,6 +73,9 @@ func _build_sky() -> void:
 	sky.moon_px = _moon_px
 	sky.z_index = -150
 	add_child(sky)
+	# The sky is distant: only the moon and the broad fill light it. Keeping it off the foreground
+	# layer stops the key (and the street lamp) from painting a bright patch across the night sky.
+	_set_light_mask_deep(sky, LAYER_BACKDROP)
 
 
 ## Whether this act's backdrop is the rooftop (the only place we let clouds drift).
@@ -88,18 +91,24 @@ func _build_lighting() -> void:
 	fill.position = Vector2(size.x * 0.5, size.y * 0.42)
 	fill.texture_scale = size.x / 256.0 * 4.5
 	# the ambient floor, a gentle lift so the cast reads without turning this into a second key.
-	# Kept broad and dim so it reads as bounce, not a second key.
-	fill.energy = 0.9
+	# Kept low so the key's shadows stay deep and read, rather than being filled back in.
+	fill.energy = 0.42
 	fill.color = Color(0.66, 0.72, 0.85) if not act.indoor else Color(0.5, 0.52, 0.6)
+	LightKit.ambient(fill)   # broad bounce, never a shadow caster
+	fill.range_item_cull_mask = LAYER_FOREGROUND | LAYER_BACKDROP   # lifts the whole scene, near and far
 	add_child(fill)
 
 	_key_light = PointLight2D.new()
 	_key_light.texture = LightTex.radial()
 	_key_light.position = Vector2(act.key_light.x * size.x, act.key_light.y * size.y)
-	_key_light.texture_scale = size.x / 256.0 * 2.6
-	_key_light.energy = 1.6
+	_key_light.texture_scale = size.x / 256.0 * 2.8
+	_key_light.energy = 1.3
 	_key_light.color = Color(1.0, 0.96, 0.86)
-	_key_light.shadow_enabled = true
+	# The key is a broad fill that shapes the scene (the legacy 'bounce/rim'); the hard, positioned
+	# shadows come from the practical lights (the lamp gobo, fire, the doorway), not from this. A
+	# huge key casting a sharp figure shadow across the whole city read as an unnatural shaft.
+	LightKit.ambient(_key_light)
+	_key_light.range_item_cull_mask = LAYER_FOREGROUND   # never paints the far sky
 	add_child(_key_light)
 
 	# the moonlight: a native PointLight2D at the same point as the visible moon, so the disc we see
@@ -111,16 +120,43 @@ func _build_lighting() -> void:
 		_moon_light.texture_scale = size.x / 256.0 * 3.4
 		_moon_light.energy = 0.55   # a weak, broad cool wash, not a hot pool
 		_moon_light.color = Palette.MOON
+		LightKit.ambient(_moon_light)   # the moon fills, it does not throw sharp shadows
+		_moon_light.range_item_cull_mask = LAYER_FOREGROUND | LAYER_BACKDROP   # the moon lights the sky too
 		add_child(_moon_light)
+
+
+## Light layers (CanvasItem.light_mask / Light2D.range_item_cull_mask):
+##   bit 1 = the foreground (cast, floor, fixtures): lit by the key and the local lights, and where
+##           real shadows fall.
+##   bit 2 = the distant backdrop (sky, far city): lit only by the broad ambient (moon, fill) so it
+##           keeps depth, but the key and local lights never reach it, so foreground figures cannot
+##           cast hard shadows across the faraway skyline.
+const LAYER_FOREGROUND := 1
+const LAYER_BACKDROP := 2
 
 
 func _build_content() -> void:
 	if act.backdrop and act.backdrop.scene:
+		# The city buildings stay on the foreground layer so the neon, the lamp and the traffic light
+		# glow on them. Only the far sky is held back (see _build_sky), so nothing paints the night.
 		_spawn(act.backdrop, -100)
+	# Light fixtures do not build occluders: their own light sits right inside their structure (the
+	# key light at a lamp, the glow at a sign), so self-occlusion only carves ugly wedges. The cast
+	# and props are the shadow casters, their bright parts skipped so a flame never blocks itself.
 	for p in act.lights:
 		_spawn(p, -10)
 	for p in act.cast:
-		_spawn(p, 0)
+		var obj := _spawn(p, 0)
+		if obj:
+			obj.build_occluders()
+
+
+## Set light_mask on a node and all its CanvasItem descendants, so a whole backdrop joins one layer.
+func _set_light_mask_deep(node: Node, mask: int) -> void:
+	if node is CanvasItem:
+		(node as CanvasItem).light_mask = mask
+	for c in node.get_children():
+		_set_light_mask_deep(c, mask)
 
 
 func _spawn(p: Placement, base_z: int) -> BoardObject:
@@ -146,16 +182,27 @@ func _collect_lights() -> Array[Dictionary]:
 			out.append({
 				"pos": L.position,
 				"col": L.color,
-				"radius": L.texture_scale * 256.0,
+				"radius": L.texture_scale * 128.0,
 				"energy": L.energy,
 			})
+		elif child is Neon:
+			# Neons have two PointLight2Ds; use the air light for the broad influence radius.
+			var n: Neon = child
+			var light := n._air_light if n._air_light else n._surface_light
+			if light:
+				out.append({
+					"pos": n.to_global(light.position),
+					"col": n.color,
+					"radius": light.texture_scale * 64.0 * 0.5,
+					"energy": light.energy,
+				})
 		elif child is BoardLight:
 			var bl: BoardLight = child
 			if bl._light:
 				out.append({
 					"pos": bl.global_position + bl._light.position,
 					"col": bl._light.color,
-					"radius": bl._light.texture_scale * 256.0,
+					"radius": bl._light.texture_scale * 128.0,
 					"energy": bl._light.energy,
 				})
 	return out
@@ -177,11 +224,10 @@ func _build_weather() -> void:
 	_ripples.lights = _collect_lights()
 	_ripples.z_index = 55
 	add_child(_ripples)
-	var shimmer := WetFloorShimmer.new()
-	shimmer.area = size
-	shimmer.ground_y = ground_y
-	shimmer.z_index = 50
-	add_child(shimmer)
+	var wet_floor := WetFloor.new()
+	wet_floor.area = size
+	wet_floor.ground_y = ground_y
+	add_child(wet_floor)
 	_lightning = LIGHTNING_SCENE.instantiate()
 	_lightning.area = size
 	_lightning.z_index = 70

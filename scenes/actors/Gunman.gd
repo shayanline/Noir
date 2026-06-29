@@ -27,3 +27,11 @@ func on_line(idx: int) -> void:
 		tw.tween_property(arm, "rotation", RAISE_ANG, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	else:
 		arm.rotation = RAISE_ANG
+
+
+func on_fx(event: String) -> void:
+	super(event)
+	if event == "muzzle":
+		# A real white-gold flash at the barrel tip; it lights the shooter and the wall for an instant.
+		var muzzle := to_local(($ArmPivot/Gun as Node2D).to_global(Vector2(18, 0)))
+		emit_flash(muzzle, LightKit.MUZZLE, 3.6, 260.0)

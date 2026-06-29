@@ -70,6 +70,34 @@ func place() -> void:
 	_refresh_visibility()
 
 
+## Build real shadow casters from this object's own art. Walks the solid Polygon2D children and
+## adds a LightOccluder2D matching each, so the 2D lights throw genuine shadows shaped like the
+## actual figure. Bright (emissive) polygons such as flames, lamp glass and neon are skipped so
+## light sources do not block their own light, and the legacy painted "Shadow" ellipse is removed
+## (real cast shadows replace it). Called by Board after place(); safe to call once.
+func build_occluders() -> void:
+	var fake := get_node_or_null("Shadow")
+	if fake:
+		fake.queue_free()
+	for c in get_children():
+		if not (c is Polygon2D):
+			continue
+		var poly := c as Polygon2D
+		if poly.polygon.size() < 3:
+			continue
+		# Skip emissive shapes: anything drawn bright is a light source, not an occluder.
+		var col := poly.color
+		if maxf(maxf(col.r, col.g), col.b) > 0.6:
+			continue
+		var occ := LightOccluder2D.new()
+		var shape := OccluderPolygon2D.new()
+		shape.polygon = poly.polygon
+		shape.closed = true
+		occ.occluder = shape
+		occ.transform = poly.transform   # match the polygon's own placement within the object
+		add_child(occ)
+
+
 func _current_y() -> float:
 	if anchor == "screen":
 		return abs_y * board.size.y
@@ -128,3 +156,13 @@ func on_line(idx: int) -> void:
 
 func on_fx(_event: String) -> void:
 	_refresh_visibility()
+
+
+## Emit a brief real flash of light at a local point on this object: a muzzle flash, a struck
+## lighter, a spark off metal. A genuine PointLight2D burst (see LightKit.flash), not a sprite.
+## local_pos is in this object's authored design space (the same coords the art uses). The burst
+## is parented to the board so its radius reads in true screen pixels regardless of object scale.
+func emit_flash(local_pos: Vector2, color: Color = LightKit.MUZZLE, peak := 3.2, radius_px := 240.0) -> void:
+	if board == null:
+		return
+	LightKit.flash(board, board.to_local(to_global(local_pos)), color, peak, radius_px)

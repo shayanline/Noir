@@ -149,6 +149,7 @@ script = ExtResource("3_yy1ee")
 scene = ExtResource("10_ni0j1")
 params = {
 "color": Color(1, 0, 0.09411765, 1),
+"dropout": true,
 "h": 30,
 "label": "GIRLS",
 "par": 0.4,

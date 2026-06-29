@@ -135,7 +135,7 @@ func _hallucination() -> Dictionary:
 				"lights": [
 					{"type": "lamp", "x": 0.30, "intensity": 1, "flicker": true, "par": 0.5},
 					{"type": "neon", "x": 0.10, "y": 0.52, "w": 92, "h": 34, "color": Color("ff0018"), "label": "BAR", "seed": 1.3},
-					{"type": "neon", "x": 0.40, "y": 0.48, "w": 120, "h": 30, "color": Color("ff0018"), "label": "GIRLS", "seed": 2.7, "par": 0.4},
+					{"type": "neon", "x": 0.40, "y": 0.48, "w": 120, "h": 30, "color": Color("ff0018"), "label": "GIRLS", "seed": 2.7, "par": 0.4, "dropout": true},
 					{"type": "neon", "x": 0.66, "y": 0.40, "w": 44, "h": 120, "color": Color("ffd400"), "label": "XXX", "seed": 4.1},
 				],
 				"cast": [

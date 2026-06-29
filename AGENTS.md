@@ -68,26 +68,43 @@ scenes/
   props/              redCar, trafficLight, dumpster, manhole, waterTower, barrelFire, fireHydrant,
                       rouletteWheel, slotMachine, cardTable, cash, drink, knife
   effects/            steam and searchlight (particles and 2D lights), newspaper, the blood set
-                      (bodyOnGround, bloodSplat, bloodDrain), RainField, RainRipples, WetFloorShimmer,
-                      NightSky (graded sky, stars, moon, clouds), Lightning
+                      (bodyOnGround, bloodSplat, bloodDrain), RainField, RainRipples, WetFloor
+                      (the lit wet asphalt, a real light receiver), NightSky (graded sky, stars,
+                      moon, clouds), Lightning
   ui/                 StartScreen (title and tale picker), Hud (captions, scene tag, nav), RotationGate
   transitions/        Transitions (ink wipe, act title card, the end card)
+src/util/             LightKit (one-line light setup), LightTex (shared radial), light textures
 tools/                build_stories.gd (regenerates the .tres tales), SmokeTest.*
-shaders/              post (grain, vignette), ink_wipe (the transition)
+shaders/              post (bloom, wet-floor mirror, grade, halftone, grain, vignette),
+                      wet_floor (the lit, rippling asphalt), ink_wipe (the transition)
 audio/ fonts/         sound and type
 ```
 
 ## Render model (how an act is staged)
 
 `Main` owns the global look, authored in `Main.tscn`: a CanvasModulate wash darkens the whole 2D
-canvas and a post shader lays grain and a vignette over everything (post_material.tres). For each act
-it swaps in a `Board`.
+canvas and a post shader (post_material.tres) lays the noir finish over everything. For each act it
+swaps in a `Board`.
 
-`hdr_2d` is off and the WorldEnvironment glow is disabled on purpose. With `hdr_2d` on, the editor
-and iOS (Forward Plus and Mobile) composite 2D in linear HDR, which crushed the scene to near black
-and over bloomed the neon, while the web Compatibility renderer ignores it and looked correct. So the
-render path is kept non HDR, no bloom, for one consistent look on every platform. The neon glow comes
-from the 2D light fixtures, not a bloom pass.
+The lighting is genuine, not painted. The project runs on the GL Compatibility renderer (one build
+for desktop, Android, iOS and web), and every light is a real 2D light: a `PointLight2D` that lights
+surfaces, responds to normal maps, and casts real shadows from `LightOccluder2D` occluders. There are
+no per object glow sprites, no painted halos, no CPU drawn light streaks. The rules of the world:
+
+- A light source is a `PointLight2D`. The visible source (a lamp lens, a neon tube, a flame) is drawn
+  bright so the bloom pass spreads it, the glow is real light caught by bloom, never an additive sprite.
+- Shadows are cast by `LightOccluder2D`. Every placed object auto builds occluders from its own solid
+  art via `BoardObject.build_occluders()`, so figures, poles and barrels throw real shadows. Bright
+  (emissive) shapes are skipped so a light never blocks its own glow.
+- The wet floor (`WetFloor` + `wet_floor.gdshader`) is a real light receiver: a scrolling ripple
+  normal map means neon, lamps and fire pool and shimmer on it as actual reflections. The long
+  vertical sign reflections are the post shader's screen space wet mirror, fed by the lit scene.
+- `post.gdshader` does the screen finish in order: chromatic aberration, the wet floor mirror, a
+  mip free disc sampled bloom (Compatibility safe), the grade (contrast, desaturate with a colour
+  keep so neon survives, cool tint), halftone, grain, vignette.
+
+`hdr_2d` is off on purpose: the bloom and grade are tuned for LDR so the look is identical on every
+platform.
 
 `Board` builds the act as a scene tree: it instances the backdrop, the light fixtures and the cast
 (each a `Placement.scene`), positions and scales each one, creates the key light and the moon as
@@ -143,6 +160,28 @@ blood red) and `fx` (`muzzle`, `blood`, `lightning`, `hammer`, `lighter`).
   it to `stories/library.tres`. No board change.
 - Restyle everything: `autoload/Palette.gd` (palette and timing), the CanvasModulate wash and lights
   in `scenes/core/Main.gd` and `scenes/board/Board.gd`, and `shaders/post.gdshader` (the screen finish).
+
+### Lighting a new asset
+
+The lighting is a shared system, so a new asset (a truck, a torch, a desk lamp, a flashlight) joins
+it with minimal config, never a bespoke glow:
+
+- Shadows are automatic. Anything placed (cast or fixture) gets `BoardObject.build_occluders()` called
+  by the board, which builds `LightOccluder2D` from the asset's own solid polygons. Just draw the
+  silhouette in dark polygons and it casts a real shadow. Draw a part bright (light value above ~0.6)
+  and it is treated as emissive: skipped as an occluder and caught by the bloom instead. No painted
+  drop shadow.
+- A new light source: drop a `PointLight2D` where the glow sits, give it the shared radial texture
+  (`LightTex.radial()`), a colour and an energy, then one line picks its behaviour:
+  - `LightKit.caster(light)` for a cool shadow caster (a street lamp, a sign, a window).
+  - `LightKit.caster(light, LightKit.WARM)` for warm light (a torch, a candle, a hearth, headlights).
+  - `LightKit.ambient(light)` for a soft fill that casts no shadow (the moon, a bounce, an air glow).
+  Make the visible bulb / tube / flame bright so the bloom spreads it; do not add a glow sprite.
+- A brief flash (a gunshot, a struck lighter, a spark, a camera): from any `BoardObject`, on the fx,
+  call `emit_flash(local_pos, LightKit.MUZZLE)` (or `LightKit.SPARK`). It spawns a real one shot
+  `PointLight2D` burst at that point and frees itself. See `Gunman` and `TrenchMan` for the pattern.
+- Keep all shadow tuning in `LightKit` (the PCF softness, the shadow tints), never per asset, so the
+  whole board stays consistent and is tuned in one place.
 
 ## Conventions
 

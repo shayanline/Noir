@@ -14,9 +14,10 @@ const NEAR := preload("res://art/city/near.png")
 ## rise high and read as a city around us rather than a distant band.
 static func build(parent: Node2D, board_size: Vector2, ground_y: float, seed_value := 0) -> void:
 	var scl := (board_size.x / 1.15) / float(FAR.get_width())
-	_layer(parent, FAR, -3, Color(0.74, 0.8, 0.98), scl * 0.78, -10.0, ground_y, board_size, seed_value)
-	_layer(parent, MID, -2, Color(0.95, 0.99, 1.12), scl * 0.9, 6.0, ground_y, board_size, seed_value)
-	_layer(parent, NEAR, -1, Color(1.22, 1.23, 1.34), scl, 18.0, ground_y, board_size, seed_value)
+	# dim, near-black city silhouettes with sparse window dots, so the neon pops
+	_layer(parent, FAR, -3, Color(0.22, 0.24, 0.32), scl * 0.78, -10.0, ground_y, board_size, seed_value)
+	_layer(parent, MID, -2, Color(0.30, 0.32, 0.40), scl * 0.9, 6.0, ground_y, board_size, seed_value)
+	_layer(parent, NEAR, -1, Color(0.40, 0.42, 0.48), scl, 18.0, ground_y, board_size, seed_value)
 
 
 ## A distant skyline only (rooftop vantage): the far and mid towers, smaller, sitting low.

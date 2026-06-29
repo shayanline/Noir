@@ -57,6 +57,18 @@ func _build_door(vp: Vector2, g: float) -> void:
 	spill.color = Color(1.0, 0.918, 0.745, 0.10)
 	add_child(spill)
 
+	# A real warm light leaking through the gap: it pools on the floor and throws a long shadow of
+	# anyone standing in the doorway back into the room. The genuine indoor companion to the street key.
+	var door_light := PointLight2D.new()
+	door_light.texture = LightTex.radial()
+	door_light.position = Vector2(dx + dw / 2.0 - gap * 0.5, dtop + dh * 0.55)
+	door_light.color = Color(1.0, 0.86, 0.62)
+	door_light.energy = 1.25
+	door_light.texture_scale = dh / 128.0 * 1.7
+	door_light.blend_mode = Light2D.BLEND_MODE_ADD
+	LightKit.caster(door_light, LightKit.WARM, 2.0)
+	add_child(door_light)
+
 
 func _grad_rect(x: float, y: float, w: float, h: float, top: Color, bot: Color) -> void:
 	var poly := Polygon2D.new()

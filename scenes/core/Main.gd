@@ -182,6 +182,18 @@ func _swap_board(act: Act) -> void:
 	_board.setup(act)
 	_board.shake_requested.connect(func(a): _shake = maxf(_shake, a))
 	_world.add_child(_board)
+	_update_reflection(act)
+
+
+## feed the post shader the wet-floor mirror: the ground line in screen uv, and the strength
+## (off indoors, where the room floor would not mirror the night).
+func _update_reflection(act: Act) -> void:
+	if _post_mat == null or _board == null:
+		return
+	var vp := get_viewport_rect().size
+	var horizon: float = (_board.position.y + _board.ground_y) / vp.y
+	_post_mat.set_shader_parameter("reflect_horizon", clampf(horizon, 0.0, 1.0))
+	_post_mat.set_shader_parameter("reflect_strength", 0.0 if act.indoor else 0.35)
 
 
 func _cue_audio(act: Act, fade := 0.6) -> void:
@@ -435,7 +447,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_resize() -> void:
 	var vp := get_viewport_rect().size
-	_camera.position = vp * 0.5
+	_camera.position = vp * 0.5 
 	if _post_mat:
 		_post_mat.set_shader_parameter("screen_size", vp)
+	if _board and GameState.story:
+		_update_reflection(GameState.current_act())
 	_layout_letterbox()
