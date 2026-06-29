@@ -46,6 +46,11 @@ var vmin := 1080.0
 ## platforms Godot handles HiDPI internally and this is always 1.0.
 var dpr := 1.0
 
+## Cache of the authored border widths and corner radii per shared theme StyleBoxFlat, keyed by
+## instance id. Captured once so the dpr scaling in _scale_theme_borders stays idempotent across
+## resizes (it always scales from the base, never from an already scaled value).
+var _border_bases := {}
+
 ## Gap between adjacent HUD chips (physical pixels). Scaled by dpr.
 var gap := 6.0
 
@@ -201,12 +206,56 @@ func _recompute() -> void:
 	end_box_top = 240.0 * dpr
 	end_box_bottom = 90.0 * dpr
 
+	_scale_theme_borders()
 	scale_changed.emit()
 
 
 ## clamp and round to int, used for font sizes
 static func _clamp_i(lo: int, v: float, hi: int) -> int:
 	return clampi(roundi(v), lo, hi)
+
+
+## Scale the border widths and corner radii of the shared theme styleboxes by dpr.
+##
+## These are authored in the 1080 base coordinate space, so on a HiDPI canvas a 1px border renders
+## as a sub pixel hairline that blurs or vanishes while the dpr scaled fonts around it grow. Scaling
+## them in place on the shared StyleBoxFlat resources keeps every bordered control (buttons, panels,
+## cards) crisp without per control overrides. The authored values are cached on first run so the
+## scaling always starts from the base and stays idempotent when dpr changes (e.g. on rotation).
+func _scale_theme_borders() -> void:
+	var theme := ThemeDB.get_project_theme()
+	if theme == null:
+		return
+	for type in theme.get_type_list():
+		for name in theme.get_stylebox_list(type):
+			var flat := theme.get_stylebox(name, type) as StyleBoxFlat
+			if flat == null:
+				continue
+			var key := flat.get_instance_id()
+			if not _border_bases.has(key):
+				_border_bases[key] = [
+					flat.border_width_left, flat.border_width_top,
+					flat.border_width_right, flat.border_width_bottom,
+					flat.corner_radius_top_left, flat.corner_radius_top_right,
+					flat.corner_radius_bottom_right, flat.corner_radius_bottom_left,
+				]
+			var b: Array = _border_bases[key]
+			flat.border_width_left = _scale_px(b[0])
+			flat.border_width_top = _scale_px(b[1])
+			flat.border_width_right = _scale_px(b[2])
+			flat.border_width_bottom = _scale_px(b[3])
+			flat.corner_radius_top_left = _scale_px(b[4])
+			flat.corner_radius_top_right = _scale_px(b[5])
+			flat.corner_radius_bottom_right = _scale_px(b[6])
+			flat.corner_radius_bottom_left = _scale_px(b[7])
+
+
+## Scale an authored pixel value by dpr, keeping a positive value at least 1px so a thin border is
+## never rounded away.
+func _scale_px(base: int) -> int:
+	if base <= 0:
+		return base
+	return maxi(1, roundi(base * dpr))
 
 
 ## Returns the device pixel ratio for the current platform.

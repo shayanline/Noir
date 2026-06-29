@@ -194,10 +194,11 @@ func _rescale() -> void:
 	var icon_sz := clampf(UIScale.vmin * 0.12, 64.0 * UIScale.dpr, 118.0 * UIScale.dpr)
 	_phone_icon.custom_minimum_size = Vector2(icon_sz, icon_sz)
 	_vbox.add_theme_constant_override("separation", roundi(UIScale.vmin * 0.03))
-	# gate button padding
+	# gate button padding. Duplicate from the theme base (not the resolved stylebox, which is our
+	# own override after the first pass) so the dpr scaled border width and corner radius stay current.
 	for btn in [_btn_rotate, _btn_skip]:
 		for state in ["normal", "hover", "pressed"]:
-			var sb: StyleBox = btn.get_theme_stylebox(state)
+			var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox(state, btn.theme_type_variation)
 			if sb is StyleBoxFlat:
 				var dup := sb.duplicate() as StyleBoxFlat
 				dup.content_margin_left = UIScale.gate_pad_h

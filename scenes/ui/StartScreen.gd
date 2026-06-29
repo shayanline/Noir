@@ -152,9 +152,10 @@ func _rescale() -> void:
 	_tales.add_theme_constant_override("separation", UIScale.tales_gap)
 	_spacer1.custom_minimum_size.y = UIScale.spacer
 	_spacer2.custom_minimum_size.y = UIScale.spacer
-	# enter button padding
+	# enter button padding. Duplicate from the theme base (not the resolved stylebox, which is our
+	# own override after the first pass) so the dpr scaled border width stays current.
 	for state in ["normal", "hover", "pressed"]:
-		var sb: StyleBox = _enter.get_theme_stylebox(state)
+		var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox(state, _enter.theme_type_variation)
 		if sb is StyleBoxFlat:
 			var dup := sb.duplicate() as StyleBoxFlat
 			dup.content_margin_left = UIScale.enter_pad_h
@@ -172,8 +173,9 @@ func _rescale() -> void:
 		tag_lbl.custom_minimum_size.x = UIScale.card_min_w
 		var inner_box: VBoxContainer = card.get_meta(&"inner_box")
 		inner_box.add_theme_constant_override("separation", UIScale.card_sep)
-		# scale the card padding to match the legacy clamp
-		var sb: StyleBox = card.get_theme_stylebox("panel")
+		# scale the card padding to match the legacy clamp. Duplicate from the theme base of the
+		# card's current variation so the dpr scaled border width stays current.
+		var sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", card.theme_type_variation)
 		if sb is StyleBoxFlat:
 			var dup := sb.duplicate() as StyleBoxFlat
 			dup.content_margin_left = UIScale.card_pad_h

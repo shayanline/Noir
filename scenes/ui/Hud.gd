@@ -754,8 +754,10 @@ func _rescale() -> void:
 	_caption_label.custom_minimum_size.x = UIScale.caption_min_w
 	_caption_label.custom_maximum_size.x = UIScale.caption_max_w
 	_cap_tex.offset_bottom = -UIScale.caption_bottom
-	# scale the caption panel padding to match the legacy clamp
-	var cap_sb: StyleBox = _caption.get_theme_stylebox("panel")
+	# scale the caption panel padding to match the legacy clamp. Duplicate from the theme base (not
+	# the resolved stylebox, which is our own override after the first pass) so the border width,
+	# scaled by UIScale, stays current.
+	var cap_sb: StyleBox = ThemeDB.get_project_theme().get_stylebox("panel", "CaptionPanel")
 	if cap_sb is StyleBoxFlat:
 		var dup := cap_sb.duplicate() as StyleBoxFlat
 		dup.content_margin_left = UIScale.caption_pad_h
