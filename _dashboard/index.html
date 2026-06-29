@@ -37,7 +37,7 @@
     <p class="sub">Live build of every branch. This page refreshes itself, and rebuilds from the deployed folders on each run. Generated 2026-06-29 22:29 UTC.</p>
     <table>
       <thead>
-        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated (UTC)</th><th>Commit</th></tr>
+        <tr><th>Branch</th><th>Preview</th><th>PR</th><th>Status</th><th>Updated</th><th>Commit</th></tr>
       </thead>
       <tbody>
       <tr>
@@ -45,7 +45,7 @@
         <td><a href="https://shayanline.github.io/Inkfall/">open</a></td>
         <td><span class="muted">-</span></td>
         <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 16:50</td>
+        <td class="updated" data-utc="2026-06-29 16:50">2026-06-29 16:50 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/d48e22b"><code>d48e22b</code></a></td>
       </tr>
       <tr>
@@ -53,19 +53,42 @@
         <td><a href="https://shayanline.github.io/Inkfall/branches/copilot-fix-small-text-and-huds-7b696ea2/">open</a></td>
         <td><a href="https://github.com/shayanline/Inkfall/pull/3">#3</a></td>
         <td><span class="badge deployed">deployed</span></td>
-        <td>2026-06-29 22:01</td>
+        <td class="updated" data-utc="2026-06-29 22:01">2026-06-29 22:01 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/fe6645c"><code>fe6645c</code></a></td>
       </tr>
       <tr>
         <td><code>fix/dashboard-local-time</code></td>
         <td><a href="https://shayanline.github.io/Inkfall/branches/fix-dashboard-local-time-9b771b81/">open</a></td>
         <td><a href="https://github.com/shayanline/Inkfall/pull/8">#8</a></td>
-        <td><span class="badge building">building</span></td>
-        <td>2026-06-29 22:28</td>
+        <td><span class="badge deployed">deployed</span></td>
+        <td class="updated" data-utc="2026-06-29 22:29">2026-06-29 22:29 UTC</td>
         <td><a href="https://github.com/shayanline/Inkfall/commit/c6d0cd7"><code>c6d0cd7</code></a></td>
       </tr>
       </tbody>
     </table>
   </main>
+  <script>
+    (function () {
+      var rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+      var units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
+      function ago(date) {
+        var diff = (date.getTime() - Date.now()) / 1000;
+        for (var i = 0; i < units.length; i++) {
+          if (Math.abs(diff) >= units[i][1]) return rtf.format(Math.round(diff / units[i][1]), units[i][0]);
+        }
+        return rtf.format(Math.round(diff), 'second');
+      }
+      function render() {
+        var cells = document.querySelectorAll('.updated[data-utc]');
+        for (var i = 0; i < cells.length; i++) {
+          var date = new Date(cells[i].getAttribute('data-utc').replace(' ', 'T') + ':00Z');
+          if (isNaN(date.getTime())) continue;
+          cells[i].textContent = ago(date);
+          cells[i].title = date.toLocaleString();
+        }
+      }
+      render();
+    })();
+  </script>
 </body>
 </html>
