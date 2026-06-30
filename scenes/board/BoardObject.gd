@@ -74,68 +74,78 @@ func place() -> void:
 	_refresh_visibility()
 
 
-## Build real shadow casters from this object's own art. Walks the solid Polygon2D children and
-## adds a LightOccluder2D matching each, so the 2D lights throw genuine shadows shaped like the
-## actual figure. Bright (emissive) polygons such as flames, lamp glass and neon are skipped so
-## light sources do not block their own light, and the legacy painted "Shadow" ellipse is removed
-## (real cast shadows replace it). Called by Board after place(); safe to call once.
+## Collect all solid (non-emissive) Polygon2D nodes in the subtree rooted at node, expressed in
+## this object's local space. Used by build_occluders() and apply_volume_light(). Emissive polygons
+## (max channel > 0.6: flames, lamp glass, neon tube) are skipped so light sources never occlude
+## their own glow. LightOccluder2D children are skipped to avoid double-processing on re-entry.
+func _collect_solid_polys(node: Node, xform: Transform2D, out: Array) -> void:
+	for c in node.get_children():
+		if c is LightOccluder2D:
+			continue
+		if c is Polygon2D:
+			var poly := c as Polygon2D
+			if poly.polygon.size() >= 3:
+				var col := poly.color
+				if maxf(maxf(col.r, col.g), col.b) <= 0.6:
+					out.append({"poly": poly, "xform": xform * poly.transform})
+		_collect_solid_polys(c, xform * (c as Node2D).transform if c is Node2D else xform, out)
+
+
+## Build real shadow casters from this object's own art. Walks the full subtree of solid Polygon2D
+## nodes (recursively, so nested limb groups are covered) and adds a LightOccluder2D matching each,
+## so the 2D lights throw genuine shadows shaped like the actual figure. Bright (emissive) polygons
+## such as flames, lamp glass and neon are skipped so light sources do not block their own light,
+## and the legacy painted "Shadow" ellipse is removed (real cast shadows replace it). Called by
+## Board after place(); safe to call once.
 func build_occluders() -> void:
 	var fake := get_node_or_null("Shadow")
 	if fake:
 		fake.queue_free()
-	for c in get_children():
-		if not (c is Polygon2D):
-			continue
-		var poly := c as Polygon2D
-		if poly.polygon.size() < 3:
-			continue
-		# Skip emissive shapes: anything drawn bright is a light source, not an occluder.
-		var col := poly.color
-		if maxf(maxf(col.r, col.g), col.b) > 0.6:
-			continue
+	var entries: Array = []
+	_collect_solid_polys(self, Transform2D.IDENTITY, entries)
+	for entry in entries:
+		var poly: Polygon2D = entry["poly"]
+		var xform: Transform2D = entry["xform"]
 		var occ := LightOccluder2D.new()
 		var shape := OccluderPolygon2D.new()
 		shape.polygon = poly.polygon
 		shape.closed = true
 		occ.occluder = shape
-		occ.transform = poly.transform   # match the polygon's own placement within the object
+		occ.transform = xform   # world-relative placement within the object
 		add_child(occ)
 
 
 ## Give this object a rounded volume so the board's 2D lights wrap it directionally: the side
 ## turned toward a source (a barrel fire, a street lamp) warms, the side turned away falls to
-## shadow. Walks the same solid Polygon2D children that cast shadows and assigns the shared
-## volume-normal material, sized to the object's own silhouette bounds (so the whole figure reads
-## as one form, not a stack of flat plates). Bright (emissive) polygons are skipped, so flames,
-## glass and neon keep their flat glow. Called by Board after build_occluders(); safe to call once.
+## shadow. Walks the full subtree of solid Polygon2D nodes (recursively, matching the occluder
+## walk) and assigns the shared volume-normal material, sized to the object's own silhouette
+## bounds (so the whole figure reads as one form, not a stack of flat plates). Bright (emissive)
+## polygons are skipped, so flames, glass and neon keep their flat glow. Called by Board after
+## build_occluders(); safe to call once.
 func apply_volume_light() -> void:
-	var lit: Array[Polygon2D] = []
+	var entries: Array = []
+	_collect_solid_polys(self, Transform2D.IDENTITY, entries)
+	if entries.is_empty():
+		return
 	var lo := Vector2(INF, INF)
 	var hi := Vector2(-INF, -INF)
-	for c in get_children():
-		if not (c is Polygon2D):
-			continue
-		var poly := c as Polygon2D
-		if poly.polygon.size() < 3:
-			continue
-		# Skip emissive shapes, the same rule the occluders use: a bright part is a light, not a
-		# surface to be shaded, so it keeps its flat glow for the bloom to spread.
-		var col := poly.color
-		if maxf(maxf(col.r, col.g), col.b) > 0.6:
-			continue
-		lit.append(poly)
+	for entry in entries:
+		var poly: Polygon2D = entry["poly"]
+		var xform: Transform2D = entry["xform"]
 		for p in poly.polygon:
-			var w: Vector2 = poly.transform * p   # the point in this object's local space
+			var w: Vector2 = xform * p   # point in this object's local space
 			lo = Vector2(minf(lo.x, w.x), minf(lo.y, w.y))
 			hi = Vector2(maxf(hi.x, w.x), maxf(hi.y, w.y))
-	if lit.is_empty() or hi.x <= lo.x:
+	if hi.x <= lo.x:
 		return
-	for poly in lit:
+	for entry in entries:
+		var poly: Polygon2D = entry["poly"]
+		var xform: Transform2D = entry["xform"]
 		var mat := ShaderMaterial.new()
 		mat.shader = _FIGURE_SHADER
-		# Express the shared object bounds in this polygon's own local space, so a child offset
-		# shifts where the polygon sits in the volume rather than giving it a volume of its own.
-		var off: Vector2 = poly.transform.origin
+		# Express the shared object bounds in this polygon's own local space (via the accumulated
+		# transform), so every polygon in the subtree sits correctly in one shared volume.
+		var off: Vector2 = xform.origin
 		mat.set_shader_parameter("bounds_min", lo - off)
 		mat.set_shader_parameter("bounds_max", hi - off)
 		poly.material = mat

@@ -7,6 +7,11 @@ extends BoardObject
 @export var color := Color(1.0, 0.98, 0.88)
 @export var intensity := 1.0
 @export var flicker := false
+## Shadow softness for this fixture's PointLight2D shadow_filter_smooth. A tighter value (1.0)
+## gives the hard, near-source shadow a neon tube or barrel fire would cast; a wider value (3.0)
+## gives the soft far-source penumbra of a distant lamp. Subclasses that call LightKit.caster()
+## directly (Lamp) read _softness themselves; this base value is used by any fixture that does not.
+@export var softness := 2.5
 
 var _light: PointLight2D
 var _base_energy := 1.0
@@ -19,6 +24,8 @@ func on_object_params(p: Dictionary) -> void:
 	if p.get("intensity") != null:
 		intensity = float(p["intensity"])
 	flicker = p.get("flicker", flicker) == true
+	if p.get("softness") != null:
+		softness = float(p["softness"])
 	if p.get("y") != null:
 		anchor = "screen"
 		abs_y = float(p["y"])

@@ -52,10 +52,11 @@ var _custom_points: PackedVector2Array = PackedVector2Array()
 var _ignite := false
 var _dropout := false
 
-## The two PointLight2Ds, built in place().
-var _surface_light: PointLight2D   ## sign shaped, tight surface glow
-var _air_light: PointLight2D       ## wide soft air bloom
-var _floor_light: PointLight2D     ## dim vertical spill dropped onto the wet floor below
+## The PointLight2Ds, built in place().
+var _surface_light: PointLight2D              ## sign shaped, tight surface glow
+var _air_light: PointLight2D                  ## wide soft air bloom
+var _floor_light: PointLight2D                ## dim vertical spill dropped onto the wet floor below
+var _tube_casters: Array[PointLight2D] = []   ## three shadow-casting lights spaced along the tube
 
 var _buzz_t := 0.0
 var _buzz_on := false
@@ -121,6 +122,9 @@ func place() -> void:
 			tw.parallel().tween_property(_surface_light, "energy", _surface_energy(), 0.6)
 		if _air_light:
 			tw.parallel().tween_property(_air_light, "energy", _air_energy(), 0.6)
+		var caster_e := _caster_energy() / 3.0
+		for lt in _tube_casters:
+			tw.parallel().tween_property(lt, "energy", caster_e, 0.6)
 		AudioDirector.neon_zap()
 	else:
 		_buzz_on = true
@@ -398,6 +402,7 @@ func _build_lights() -> void:
 	add_child(_air_light)
 
 	_build_floor_spill()
+	_build_tube_casters()
 
 	# Keep _light (from BoardLight) pointing at the surface light for the base class.
 	_light = _surface_light
@@ -434,6 +439,42 @@ func _build_floor_spill() -> void:
 	add_child(_floor_light)
 
 
+## Three shadow-casting PointLight2Ds evenly distributed across the sign's width and height, so the
+## neon throws a shadow that converges like a real tube (soft near-field, harder far-field) rather
+## than like a point source clamped to the sign centre. Each carries a third of the total caster
+## energy and uses the NEON shadow tint, so the shadows carry the faintest magenta undertone.
+## The caster radius is intentionally tight (sign-sized) so the shadow falls close to the tube
+## rather than washing the whole scene. softness uses the base-class value (default 1.5 for neon:
+## tight, since a tube is a near source whose shadow hardens quickly with distance).
+func _build_tube_casters() -> void:
+	_tube_casters.clear()
+	if _w <= 0.0 or _h <= 0.0:
+		return
+	var cx := _shape_centre_x()
+	var cy := _h / 2.0
+	# Three positions: left third, centre, right third of the sign bounding box.
+	var positions := [
+		Vector2(cx - _w * 0.3, cy),
+		Vector2(cx,             cy),
+		Vector2(cx + _w * 0.3, cy),
+	]
+	var caster_energy := _caster_energy() / 3.0
+	var caster_radius := maxf(_w, _h) * 1.2 / LightKit._TEX_RADIUS
+	for pos in positions:
+		var lt := PointLight2D.new()
+		lt.texture = LightTex.radial()
+		lt.color = color
+		lt.energy = caster_energy
+		lt.position = pos
+		lt.texture_scale = caster_radius
+		lt.blend_mode = Light2D.BLEND_MODE_ADD
+		lt.range_item_cull_mask = Board.LAYER_FOREGROUND
+		# Tight shadow (1.5): a tube is close to the wall, so its shadow penumbra is narrow.
+		LightKit.caster(lt, LightKit.NEON, 1.5)
+		add_child(lt)
+		_tube_casters.append(lt)
+
+
 ## The centre x of the sign shape for lighting purposes. The lights sit over the body of the sign
 ## where the text and glass tubes are, not biased toward the arrowhead tip. The tube shader handles
 ## brightening at the actual bend points, so the spill lights only need to cover the main mass.
@@ -453,6 +494,12 @@ func _air_energy() -> float:
 ## relight the scene.
 func _floor_energy() -> float:
 	return 1.7 * intensity
+
+
+## Combined energy of the three tube shadow casters. Kept modest (total = 0.9 * intensity across
+## three nodes) so they contribute shadow without significantly changing the scene brightness.
+func _caster_energy() -> float:
+	return 0.9 * intensity
 
 
 # --- light contribution (improvement 4) ----------------------------------------------------
@@ -591,6 +638,9 @@ func _cold_restrike() -> void:
 		tw.parallel().tween_property(_air_light, "energy", _air_energy(), _RESTRIKE_DUR)
 	if _floor_light:
 		tw.parallel().tween_property(_floor_light, "energy", _floor_energy(), _RESTRIKE_DUR)
+	var caster_e := _caster_energy() / 3.0
+	for lt in _tube_casters:
+		tw.parallel().tween_property(lt, "energy", caster_e, _RESTRIKE_DUR)
 	_enter_state(_State.BUZZ)
 
 
@@ -608,3 +658,6 @@ func _set_light_energy(f: float) -> void:
 		_air_light.energy = _air_energy() * f
 	if _floor_light:
 		_floor_light.energy = _floor_energy() * f
+	var caster_e := _caster_energy() / 3.0
+	for lt in _tube_casters:
+		lt.energy = caster_e * f

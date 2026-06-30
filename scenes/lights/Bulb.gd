@@ -19,11 +19,13 @@ func place() -> void:
 	if _light == null:
 		return
 	# The scene light becomes a tight warm halo right at the glass: the hot source the bloom spreads,
-	# not the whole room light.
+	# not the whole room light. It is a shadow caster so the bulb throws a real downward shadow cone
+	# and picks up the softness authored in the placement params.
 	_light.texture = LightTex.radial()
 	_light.texture_scale = 0.55
 	_base_energy = 0.6 * intensity
 	_light.energy = _base_energy
+	LightKit.caster(_light, LightKit.FIRE, softness)
 	_build_spill()
 
 

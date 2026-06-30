@@ -12,9 +12,14 @@ uniform vec2 screen_size = vec2(1280.0, 720.0);
 uniform float time = 0.0;
 
 // bloom (screen-space, explicit disc-sampled glow off the bright pixels: neon, moon, lit windows)
-uniform float bloom_intensity : hint_range(0.0, 3.0) = 0.45;
-uniform float bloom_threshold : hint_range(0.1, 1.0) = 0.52;
-uniform float bloom_radius : hint_range(1.0, 24.0) = 8.0;   // disc radius in px
+// Two layers: a tight hot core (inner_*) for the bright halo right at the source, and a wide soft
+// halo (outer_*) that falls off into the surrounding scene like a real light pool. Together they
+// read as genuine light spread, not just a bright ring clamped to the source polygon.
+uniform float bloom_inner_intensity : hint_range(0.0, 3.0) = 0.55;   // hot core around the source
+uniform float bloom_outer_intensity : hint_range(0.0, 2.0) = 0.20;   // wide soft halo into the scene
+uniform float bloom_threshold : hint_range(0.1, 1.0) = 0.42;         // lower: more lit surfaces bloom
+uniform float bloom_inner_radius : hint_range(1.0, 24.0) = 6.0;      // tight core disc radius in px
+uniform float bloom_outer_radius : hint_range(4.0, 48.0) = 22.0;     // wide halo disc radius in px
 
 // wet-floor mirror reflection: below the horizon, the scene above is mirrored down with a watery
 // wobble and a depth fade. Set per act (strength 0 indoors). horizon is the ground line in screen uv.
@@ -53,26 +58,26 @@ float rand(vec2 p) {
 }
 
 // Bright-pass: keep only the part of a sample above the bloom threshold, with a soft knee.
-// Uses max channel so saturated neon (low luma, high value) still blooms.
+// Uses max channel so saturated neon (low luma, high value) still blooms even at low luminance.
 vec3 bright_pass(vec3 s) {
 	float val = max(max(s.r, s.g), s.b);
-	float soft = smoothstep(bloom_threshold - 0.12, bloom_threshold + 0.08, val);
+	// Tighter knee (0.10 wide) so the cutoff is crisp: only genuinely lit surfaces bleed.
+	float soft = smoothstep(bloom_threshold - 0.10, bloom_threshold + 0.10, val);
 	return s * soft;
 }
 
-// Disc-sampled bloom: sum the bright-pass over a golden-angle spiral of taps across a disc
-// of bloom_radius pixels, weighted by a Gaussian on the tap distance. Mip-free, so it runs
-// on the Compatibility renderer (WebGL2 / GLES3) where screen-texture mipmaps are not
-// guaranteed. The glow is genuine, gathered from the actual bright pixels, not a per-object fake.
-vec3 bloom_disc(vec2 uv, vec2 px) {
+// Disc-sampled bloom: sum the bright-pass over a golden-angle spiral of TAPS taps across a disc
+// of radius pixels, weighted by a Gaussian on tap distance. Mip-free, so it runs on the
+// Compatibility renderer (WebGL2 / GLES3) where screen-texture mipmaps are not guaranteed.
+// The glow is genuine, gathered from actual bright pixels, not a per-object fake.
+vec3 bloom_disc(vec2 uv, vec2 px, float radius, int taps) {
 	vec3 acc = vec3(0.0);
 	float wsum = 0.0;
-	const int TAPS = 24;
 	const float GA = 2.39996323;   // golden angle, for even spiral coverage
-	float sig2 = 2.0 * (bloom_radius * 0.6) * (bloom_radius * 0.6);
-	for (int i = 0; i < TAPS; i++) {
+	float sig2 = 2.0 * (radius * 0.6) * (radius * 0.6);
+	for (int i = 0; i < taps; i++) {
 		float fi = float(i);
-		float r = sqrt((fi + 0.5) / float(TAPS)) * bloom_radius;   // sqrt = even disc fill
+		float r = sqrt((fi + 0.5) / float(taps)) * radius;   // sqrt = even disc area fill
 		float a = fi * GA;
 		vec2 offs = vec2(cos(a), sin(a)) * r * px;
 		float w = exp(-r * r / sig2);
@@ -107,10 +112,15 @@ void fragment() {
 		}
 	}
 
-	// --- bloom: gather the bright-pass over a disc of real screen pixels (mip-free) so saturated
-	// neon, the moon and lit windows glow. Added before the grade, so the glow follows the noir
-	// colour rules. This is genuine light spread off the bright sources, not a per-object overlay. ---
-	col += bloom_disc(uv, px) * bloom_intensity;
+	// --- bloom: two-layer disc-sampled glow (mip-free, Compatibility-safe).
+	// Inner layer: tight hot core right at the source (24 taps, radius 6 px). Gives the hot halo
+	// that sits flush against the tube / bulb / moon disc.
+	// Outer layer: wide soft halo that falls off into the scene (16 taps, radius 22 px). This is
+	// what makes a neon sign or street lamp read as a real pool of light rather than a bright ring
+	// clamped to the source polygon. Both are added before the grade, so the glow follows the
+	// noir desaturation and cool-tint rules and does not compete with the grade. ---
+	col += bloom_disc(uv, px, bloom_inner_radius, 24) * bloom_inner_intensity;
+	col += bloom_disc(uv, px, bloom_outer_radius, 16) * bloom_outer_intensity;
 
 	// --- grade: contrast, desaturate with a selective colour keep, cool tint ---
 	col = (col - 0.5) * contrast + 0.5;

@@ -13,6 +13,11 @@ extends RefCounted
 # Shadow tints: near-black with a faint hue so shadows read coloured, never flat grey.
 const COOL := Color(0.01, 0.012, 0.03, 0.9)    ## the default night shadow
 const WARM := Color(0.03, 0.016, 0.006, 0.85)  ## firelight / tungsten shadow
+# Expressive tints: extremely dark, used as shadow_color on caster lights whose colour bleeds.
+# The tint is subtlety itself — it reads as a feeling rather than a colour block — but it gives
+# the shadows of a neon sign or barrel fire a correctly hued undertone.
+const NEON := Color(0.025, 0.004, 0.025, 0.88)  ## neon / discharge sign: very dark magenta
+const FIRE := Color(0.05, 0.016, 0.003, 0.85)   ## barrel fire / torch / candle: very dark orange
 
 # Flash colours for the brief bursts.
 const MUZZLE := Color(1.0, 0.93, 0.7)          ## hot white-gold gunshot

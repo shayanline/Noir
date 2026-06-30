@@ -116,8 +116,11 @@ func _build_lighting() -> void:
 	_key_light.range_item_cull_mask = LAYER_FOREGROUND   # never paints the far sky
 	add_child(_key_light)
 
-	# the moonlight: a native PointLight2D at the same point as the visible moon, so the disc we see
-	# and the cool grade it casts are one and the same. Colour comes from the palette.
+	# the moonlight: two coincident PointLight2Ds at the visible moon position.
+	# Layer 1, the fill: broad, shadowless, the cool grade that lifts the whole scene.
+	# Layer 2, the caster: low energy, large radius, very soft PCF so shadows are crisp and long
+	# (the moon is a distant, parallel-ish source) but not pixel-sharp. This is the shadow that
+	# turns a rooftop coat or a fire escape rail into a classic noir silhouette.
 	if act.has_moon and not act.indoor:
 		_moon_light = PointLight2D.new()
 		_moon_light.texture = LightTex.radial()
@@ -125,9 +128,23 @@ func _build_lighting() -> void:
 		_moon_light.texture_scale = size.x / 256.0 * 3.4
 		_moon_light.energy = 0.55   # a weak, broad cool wash, not a hot pool
 		_moon_light.color = Palette.MOON
-		LightKit.ambient(_moon_light)   # the moon fills, it does not throw sharp shadows
-		_moon_light.range_item_cull_mask = LAYER_FOREGROUND | LAYER_BACKDROP   # the moon lights the sky too
+		LightKit.ambient(_moon_light)   # the fill: lifts the scene, casts no shadow
+		_moon_light.range_item_cull_mask = LAYER_FOREGROUND | LAYER_BACKDROP   # lights sky too
 		add_child(_moon_light)
+
+		# Shadow caster: a second, lower-energy moon that throws the real cast shadows. It is
+		# intentionally dim (0.18) so it does not relight the scene, only deepen the shadow story.
+		# A very large radius (covers the whole frame from the moon position) and a very low smooth
+		# (0.5) give long, near-parallel crisp shadows, which is physically correct for a distant source.
+		var moon_caster := PointLight2D.new()
+		moon_caster.texture = LightTex.radial()
+		moon_caster.position = _moon_px
+		moon_caster.texture_scale = size.x / 256.0 * 5.5
+		moon_caster.energy = 0.18
+		moon_caster.color = Palette.MOON
+		LightKit.caster(moon_caster, LightKit.COOL, 0.5)   # crisp, long, cool shadows
+		moon_caster.range_item_cull_mask = LAYER_FOREGROUND
+		add_child(moon_caster)
 
 
 ## Light layers (CanvasItem.light_mask / Light2D.range_item_cull_mask):

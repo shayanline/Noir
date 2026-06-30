@@ -13,9 +13,11 @@ shader_type canvas_item;
 // The object's bounds in this primitive's own local space (the board sets these per polygon).
 uniform vec2 bounds_min = vec2(-1.0, -1.0);
 uniform vec2 bounds_max = vec2(1.0, 1.0);
-// How round the volume reads: x is the main left-right wrap, y a slight top-to-bottom barrel.
-uniform float bulge_x : hint_range(0.0, 2.0) = 1.0;
-uniform float bulge_y : hint_range(0.0, 2.0) = 0.3;
+// How round the volume reads: x is the main left-right wrap (a deeper value makes the lighting
+// rake convincingly around a coat, a torso, a car door), y a gentle top-to-bottom barrel that
+// keeps the figure from looking like a flat slab under overhead light.
+uniform float bulge_x : hint_range(0.0, 2.0) = 1.35;
+uniform float bulge_y : hint_range(0.0, 2.0) = 0.45;
 
 varying vec2 v_local;
 
