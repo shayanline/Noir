@@ -3,8 +3,8 @@ extends BoardBackdrop
 ## An interior: a dark wall with faint panel seams, a door leaking a warm sliver of light, and a
 ## dim floor. Used for the underground casino acts.
 
-var _wall := Color("06070b")
-var _wall_top := Color("0a0c11")
+var _wall := Color("191c26")
+var _wall_top := Color("262a37")
 var _door := -1.0
 
 

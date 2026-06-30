@@ -10,5 +10,7 @@ func _ready() -> void:
 		return
 	if light.texture == null:
 		light.texture = LightTex.radial()
-	light.energy = 1.2
-	light.texture_scale = 1.2
+	# A bare bulb that pools on the table and just reaches the near floor and wall, keeping the rest of
+	# the room in noir dark rather than washing the back wall to grey.
+	light.energy = 0.85
+	light.texture_scale = 1.4

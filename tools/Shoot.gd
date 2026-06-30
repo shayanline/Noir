@@ -47,6 +47,11 @@ func _ready() -> void:
 	await _settle()
 	await _shot("05_danny_casino")
 
+	_main._playing = true
+	await _main._to_act(2)
+	await _settle()
+	await _shot("06_danny_loss")
+
 	print("SHOOT DONE")
 	get_tree().quit()
 

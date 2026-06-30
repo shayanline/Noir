@@ -138,22 +138,21 @@ func _outline_points() -> PackedVector2Array:
 				Vector2(0, 0), Vector2(_w, 0), Vector2(_w + pw, _h / 2.0),
 				Vector2(_w, _h), Vector2(0, _h), Vector2(0, 0)])
 		"pill":
-			# A rounded rectangle (pill shape) approximated with arcs at each short end.
-			var r := _h * 0.5
+			# A stadium (rounded rectangle): two straight edges joined by smooth semicircular caps.
+			# Eight segments per cap so the ends read as true curves, not facets. The straight top
+			# and bottom edges are the implicit segments between the caps.
+			var r := minf(_h, _w) * 0.5
+			var segs := 8
 			var pts := PackedVector2Array()
-			# top edge, left to right
-			pts.append(Vector2(r, 0))
-			pts.append(Vector2(_w - r, 0))
-			# right cap (semicircle, top to bottom)
-			for i in range(5):
-				var a := -PI / 2.0 + PI * float(i) / 4.0
+			# right cap, top tangent round to bottom tangent (centre at _w - r, r)
+			for i in range(segs + 1):
+				var a := -PI / 2.0 + PI * float(i) / float(segs)
 				pts.append(Vector2(_w - r + cos(a) * r, r + sin(a) * r))
-			# bottom edge, right to left
-			pts.append(Vector2(r, _h))
-			# left cap (semicircle, bottom to top)
-			for i in range(5):
-				var a := PI / 2.0 + PI * float(i) / 4.0
+			# left cap, bottom tangent round to top tangent (centre at r, r)
+			for i in range(segs + 1):
+				var a := PI / 2.0 + PI * float(i) / float(segs)
 				pts.append(Vector2(r + cos(a) * r, r + sin(a) * r))
+			pts.append(pts[0])   # close the loop back to the top right tangent
 			return pts
 		"chevron":
 			var indent := _h * 0.4
@@ -171,7 +170,7 @@ func _outline_points() -> PackedVector2Array:
 			var rx := _w * 0.5
 			var ry := _h * 0.5
 			var pts := PackedVector2Array()
-			var segs := 16
+			var segs := 24
 			for i in range(segs + 1):
 				var a := TAU * float(i) / float(segs)
 				pts.append(Vector2(cx + cos(a) * rx, cy + sin(a) * ry))
@@ -199,10 +198,24 @@ func _build_outline() -> void:
 	tube.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	tube.end_cap_mode = Line2D.LINE_CAP_ROUND
 	var pts := _outline_points()
+	# A closed shape (rect, arrow, pill, ...) is one continuous loop. Drawn as a plain Line2D it
+	# would begin and end on the same corner, stacking two round caps and two dark end tapers there,
+	# the overlapped nub that broke the top left corner. Move the seam to the middle of the first
+	# edge so the two caps meet on a straight run (the join vanishes) and every real corner becomes a
+	# clean interior joint, and tell the shader the tube is closed so it keeps full brightness round.
+	var is_closed := pts.size() >= 4 and pts[0].is_equal_approx(pts[pts.size() - 1])
+	if is_closed:
+		pts = _seam_at_midedge(pts)
+		# No end caps on a loop: the seam sits mid edge where the two segments already meet, so a
+		# round cap on each end would only stack two half discs there and, with additive blend,
+		# burn a bright pip into the tube. The interior corners still get round joints.
+		tube.begin_cap_mode = Line2D.LINE_CAP_NONE
+		tube.end_cap_mode = Line2D.LINE_CAP_NONE
 	tube.points = pts
 	var mat := ShaderMaterial.new()
 	mat.shader = _NEON_SHADER
 	mat.set_shader_parameter("glow_color", color)
+	mat.set_shader_parameter("closed", is_closed)
 	# Feed the bend positions (as fractions of total arc length) to the shader.
 	var bends := _compute_bend_fractions(pts)
 	mat.set_shader_parameter("bend_count", float(bends.size()))
@@ -215,8 +228,30 @@ func _build_outline() -> void:
 	add_child(tube)
 
 
-## Compute the fractional arc-length position (0..1) of each interior bend (corner) in the outline.
-## The first and last points are the tube ends, not bends.
+## Reorder a closed outline (first point equals last) so its open seam falls at the midpoint of the
+## first edge rather than on a corner. The Line2D then begins and ends mid edge, where its two round
+## caps line up on a straight run and disappear, while every real corner becomes an interior round
+## joint. Returns a path whose first and last points are that midpoint.
+func _seam_at_midedge(pts: PackedVector2Array) -> PackedVector2Array:
+	var ring := pts.duplicate()
+	if ring.size() >= 2 and ring[0].is_equal_approx(ring[ring.size() - 1]):
+		ring.remove_at(ring.size() - 1)
+	if ring.size() < 3:
+		return pts
+	var seam := (ring[0] + ring[1]) * 0.5
+	var out := PackedVector2Array()
+	out.append(seam)
+	for i in range(1, ring.size()):
+		out.append(ring[i])
+	out.append(ring[0])
+	out.append(seam)
+	return out
+
+
+## Compute the fractional arc-length position (0..1) of each sharp corner in the outline, for the
+## shader's bend brightening. Only genuine corners count: a vertex whose direction changes sharply.
+## Smooth arc vertices (a pill cap, a circle) turn only a little at each step, so they are skipped
+## and never pick up stray hot spots.
 func _compute_bend_fractions(pts: PackedVector2Array) -> Array[float]:
 	if pts.size() < 3:
 		return []
@@ -228,10 +263,15 @@ func _compute_bend_fractions(pts: PackedVector2Array) -> Array[float]:
 		lengths.append(total)
 	if total < 0.001:
 		return []
-	# interior points (skip first and last) are the bends
 	var fracs: Array[float] = []
 	for i in range(1, pts.size() - 1):
-		fracs.append(lengths[i] / total)
+		var into := pts[i] - pts[i - 1]
+		var out_dir := pts[i + 1] - pts[i]
+		if into.length() < 0.001 or out_dir.length() < 0.001:
+			continue
+		# only a sharp turn (more than ~34 degrees) reads as a corner where the gas pools
+		if absf(into.angle_to(out_dir)) > 0.6:
+			fracs.append(lengths[i] / total)
 		if fracs.size() >= 6:
 			break
 	return fracs
@@ -325,21 +365,33 @@ func _build_lights() -> void:
 	_surface_light.energy = _surface_energy()
 	_surface_light.position = Vector2(cx, cy)
 	var aspect := _w / maxf(_h, 1.0)
-	var base_scale := maxf(_w, _h) * 1.1 / 64.0
+	var base_scale := maxf(_w, _h) * 1.3 / 64.0
 	_surface_light.texture_scale = base_scale
 	_surface_light.scale = Vector2(aspect if aspect < 1.0 else 1.0, 1.0 if aspect < 1.0 else 1.0 / aspect)
 	_surface_light.blend_mode = Light2D.BLEND_MODE_ADD
+	# Reach both the near surfaces (foreground) and the far backdrop (the sky, the distant city), so a
+	# sign hung against open sky still casts its colour onto whatever sits behind it, the wall glow.
+	# Without this the spill is foreground only and a sky sign shows only its own tube halo.
+	_surface_light.range_item_cull_mask = Board.LAYER_FOREGROUND | Board.LAYER_BACKDROP
 	LightKit.ambient(_surface_light)
 	add_child(_surface_light)
 
-	# Air light: a wide soft disc, the atmospheric bloom in the air around the sign.
+	# Air light: the soft atmospheric bloom hanging in the air around the sign. It follows the sign's
+	# proportions (a wide sign casts a wide haze, not a round blob) but stays rounder than the surface
+	# light, so the haze reads as a soft cloud loosely shaped to the sign rather than a hard ellipse.
 	_air_light = PointLight2D.new()
 	_air_light.texture = _LIGHT_TEX
 	_air_light.color = color
 	_air_light.energy = _air_energy()
 	_air_light.position = Vector2(cx, cy)
-	_air_light.texture_scale = maxf(_w, _h) * 2.6 / 64.0
+	# A generous haze with a floor, so even a small sign throws a soft cloud large enough to read as
+	# light hanging in the night air, not a tight ring clamped to the glass.
+	_air_light.texture_scale = maxf(maxf(_w, _h) * 3.6, 90.0) / 64.0
+	var air_squash := Vector2(aspect if aspect < 1.0 else 1.0, 1.0 if aspect < 1.0 else 1.0 / aspect)
+	_air_light.scale = Vector2.ONE.lerp(air_squash, 0.6)
 	_air_light.blend_mode = Light2D.BLEND_MODE_ADD
+	# Same reach as the surface light: the soft haze lands on the sky and far city behind the sign.
+	_air_light.range_item_cull_mask = Board.LAYER_FOREGROUND | Board.LAYER_BACKDROP
 	LightKit.ambient(_air_light)
 	add_child(_air_light)
 
@@ -360,11 +412,11 @@ func _shape_centre_x() -> float:
 
 
 func _surface_energy() -> float:
-	return 1.8 * intensity
+	return 2.0 * intensity
 
 
 func _air_energy() -> float:
-	return 0.8 * intensity
+	return 1.3 * intensity
 
 
 # --- light contribution (improvement 4) ----------------------------------------------------

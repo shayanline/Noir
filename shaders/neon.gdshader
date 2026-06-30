@@ -14,6 +14,7 @@ uniform float core_heat : hint_range(0.0, 1.0) = 0.55;     // how much the core 
 uniform float brightness : hint_range(1.0, 6.0) = 2.8;     // overdrive to survive the CanvasModulate crush, enough to read as glowing glass
 
 // along-tube modulation
+uniform bool closed = false;                               // a closed loop (rect, arrow, ...): no end caps to taper
 uniform float end_taper : hint_range(0.0, 0.2) = 0.06;      // fraction of tube length that fades at each end
 uniform float bend_boost : hint_range(0.0, 0.5) = 0.18;     // extra brightness at bend points (corners)
 uniform float shimmer_speed : hint_range(0.0, 4.0) = 0.7;   // speed of the gas discharge crawl
@@ -28,9 +29,10 @@ void fragment() {
 	float d = abs(UV.y - 0.5) * 2.0;                          // 0 at the centreline, 1 at the line edge
 	float t = UV.x;                                            // 0..1 along the tube
 
-	// end taper: the glass caps at both ends are dark, fade smoothly to zero
+	// end taper: an open tube's two glass caps are dark and fade to zero. A closed loop has no
+	// free ends (the seam is a continuous run), so it keeps full brightness all the way round.
 	float taper = 1.0;
-	if (end_taper > 0.001) {
+	if (!closed && end_taper > 0.001) {
 		taper = smoothstep(0.0, end_taper, t) * smoothstep(1.0, 1.0 - end_taper, t);
 	}
 
@@ -44,8 +46,10 @@ void fragment() {
 	}
 	bend_bright = min(bend_bright, 1.0) * bend_boost;
 
-	// gas discharge shimmer: a subtle brightness wave crawling along the tube
-	float shimmer = sin(t * 18.0 - TIME * shimmer_speed * 6.28) * 0.5 + 0.5;
+	// gas discharge shimmer: a subtle brightness wave crawling along the tube. A whole number of
+	// cycles along the length (3 * TAU) so on a closed loop the wave meets itself at the seam with
+	// no step, and the seam stays invisible.
+	float shimmer = sin(t * 18.8495559 - TIME * shimmer_speed * 6.28) * 0.5 + 0.5;
 	float along_mod = taper * (1.0 + bend_bright + shimmer * shimmer_amount);
 
 	float glow = exp(-d * d * glow_falloff * glow_falloff);   // the coloured glass halo

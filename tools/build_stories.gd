@@ -153,10 +153,10 @@ func _hallucination() -> Dictionary:
 				],
 			},
 			{
-				"title": "THE ALLEY", "ground": 0.8, "key_light": {"x": 0.74, "y": 0.3}, "moon": {"x": 0.5, "y": 0.11}, "rain_vol": 0.16,
+				"title": "THE ALLEY", "ground": 0.8, "key_light": {"x": 0.45, "y": 0.34}, "moon": {"x": 0.5, "y": 0.11}, "rain_vol": 0.16,
 				"backdrop": {"type": "alley", "seed": 77123},
 				"lights": [
-					{"type": "neon", "x": 0.72, "y": 0.24, "w": 64, "h": 34, "color": Color("ff0018"), "label": "EAT", "seed": 5.2, "par": 0.3, "shape": "arrow", "ignite": true},
+					{"type": "neon", "x": 0.72, "y": 0.22, "w": 192, "h": 102, "color": Color("ff0018"), "label": "EAT", "seed": 5.2, "par": 0.3, "shape": "arrow", "ignite": true, "intensity": 1.8},
 				],
 				"cast": [
 					{"type": "dumpster", "x": 0.11, "scale": 1, "par": 0.4},
@@ -242,10 +242,10 @@ func _danny() -> Dictionary:
 			},
 			{
 				"title": "THE TABLE", "ground": 0.82, "key_light": {"x": 0.5, "y": 0.3}, "rain_vol": 0.16,
-				"backdrop": {"type": "room", "wall": "#06070b", "wall_top": "#0b0d12", "door": 0.64},
+				"backdrop": {"type": "room", "wall": "#191c26", "wall_top": "#262a37", "door": 0.64},
 				"lights": [
 					{"type": "bulb", "x": 0.45, "y": 0.30, "intensity": 1, "flicker": true, "par": 0.2},
-					{"type": "neon", "x": 0.14, "y": 0.20, "w": 120, "h": 30, "color": Color("ff0018"), "label": "FORTUNE", "shape": "arrow", "seed": 2.2, "par": 0.2},
+					{"type": "neon", "x": 0.10, "y": 0.245, "w": 240, "h": 60, "color": Color("ff0018"), "label": "FORTUNE", "shape": "arrow", "seed": 2.2, "par": 0.2, "intensity": 2.4},
 				],
 				"cast": [
 					{"type": "rouletteWheel", "x": 0.20, "y": 0.74, "scale": 0.8, "par": 0.2},
@@ -266,9 +266,10 @@ func _danny() -> Dictionary:
 			},
 			{
 				"title": "THE LOSS", "ground": 0.82, "key_light": {"x": 0.5, "y": 0.3}, "rain_vol": 0.16,
-				"backdrop": {"type": "room", "wall": "#05060a", "wall_top": "#090b10", "door": 0.62},
+				"backdrop": {"type": "room", "wall": "#15171f", "wall_top": "#202430", "door": 0.62},
 				"lights": [
 					{"type": "bulb", "x": 0.45, "y": 0.30, "intensity": 0.8, "flicker": true, "par": 0.2},
+					{"type": "neon", "x": 0.10, "y": 0.245, "w": 240, "h": 60, "color": Color("ff0018"), "label": "FORTUNE", "shape": "arrow", "seed": 4.4, "par": 0.2, "intensity": 2.4, "dropout": true},
 				],
 				"cast": [
 					{"type": "slotMachine", "x": 0.08, "scale": 0.85, "par": 0.2},

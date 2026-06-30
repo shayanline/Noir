@@ -18,9 +18,25 @@ there is no per frame repaint. The flow is signal driven, and the UI look comes 
 - Play from a terminal: `Godot --path .` (use the Godot 4.7 binary on your machine).
 - Headless parse and load check (no window): `Godot --path . --editor --headless --quit` once to build
   the class cache, then `Godot --path . --headless --quit-after 120` and read the output for errors.
-- Headless smoke test: `Godot --path . --headless tools/SmokeTest.tscn` builds every act, sets every
-  line and fires every fx, printing one OK line per act. Use it to catch runtime errors after a change.
-- Headless skips rendering, so for anything visual run it windowed and look at it.
+- Headless skips rendering, so for anything visual capture it windowed.
+- Screenshot only what changed, never boot the whole story. To review the look, build and capture just
+  the exact scene you touched: the single act, line or object under test. The `tools/LightShot.gd`
+  pattern is the template, it builds one act with the real render setup (the CanvasModulate wash, the
+  Environment and the post material), sets `STORY_INDEX`, `ACT_INDEX` and `LINE_INDEX`, waits a few
+  frames, then saves one PNG. Point those indices at what you changed and run it windowed
+  (`Godot --path . --rendering-driver opengl3 --resolution 1920x1080 tools/LightShot.tscn`), then look
+  at the frame. Reach for the whole story driver (`tools/Shoot.*`) only when the change is genuinely
+  about the flow across acts. These harnesses are throwaway, delete any you add when done.
+- Probe a change in isolation first. When you change one thing (an object, a light, a shader, an
+  effect), test it on its own before testing it in a full act, so the global wash, the post finish and
+  the rest of the cast cannot mask or distort what you did. `tools/ObjectShot.gd` is the ready made
+  harness: set its `SCENE_PATH`, `ROLE` (`cast`, `light` or `backdrop`), `PARAMS`, `LINE_INDEX` and
+  optional `FX`, and it hosts that one object on a real `Board` with an otherwise empty act (the exact
+  production spawn path) and saves one PNG. Run it windowed
+  (`Godot --path . --rendering-driver opengl3 --resolution 1920x1080 tools/ObjectShot.tscn`), and flip
+  `WITH_POST` off to inspect the raw art and lighting without the noir grade. Confirm the change does
+  exactly what you expect on its own, then capture it once more inside the real act (`LightShot`) so
+  you know it still reads under the global look.
 
 ## Map
 
@@ -74,7 +90,8 @@ scenes/
   ui/                 StartScreen (title and tale picker), Hud (captions, scene tag, nav), RotationGate
   transitions/        Transitions (ink wipe, act title card, the end card)
 src/util/             LightKit (one-line light setup), LightTex (shared radial), light textures
-tools/                build_stories.gd (regenerates the .tres tales), SmokeTest.*
+tools/                build_stories.gd (regenerates the .tres tales), ObjectShot.* (one object in
+                      isolation), LightShot.* (single act screenshot), Shoot.* (whole story sweep)
 shaders/              post (bloom, wet-floor mirror, grade, halftone, grain, vignette),
                       wet_floor (the lit, rippling asphalt), ink_wipe (the transition)
 audio/ fonts/         sound and type
